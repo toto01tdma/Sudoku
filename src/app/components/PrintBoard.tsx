@@ -260,7 +260,7 @@ export default function PrintBoard({ size, onBack }: PrintBoardProps) {
           {/* Instructions */}
           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 max-w-md text-center text-sm text-gray-600 dark:text-gray-300">
             <p className="mb-2">
-              Configure your print settings above, then click "Print Preview"
+              Configure your print settings above, then click &quot;Print Preview&quot;
             </p>
             <p>
               You can choose to include or exclude titles and the solution grid

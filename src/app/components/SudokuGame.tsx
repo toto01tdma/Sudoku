@@ -4,10 +4,8 @@ import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { 
   SudokuBoard, 
-  SudokuCell, 
   generatePuzzle, 
   isValidMove, 
-  isBoardSolved,
   isBoardComplete
 } from '../utils/sudokuLogic';
 
@@ -19,17 +17,15 @@ interface SudokuGameProps {
 export default function SudokuGame({ size, onBack }: SudokuGameProps) {
   const [board, setBoard] = useState<SudokuBoard>([]);
   const [originalBoard, setOriginalBoard] = useState<SudokuBoard>([]);
-  const [solution, setSolution] = useState<SudokuBoard>([]);
   const [focusedCell, setFocusedCell] = useState<[number, number] | null>(null);
   const [errors, setErrors] = useState<Set<string>>(new Set());
   const [isComplete, setIsComplete] = useState(false);
 
   // Generate new puzzle when component mounts or size changes
   useEffect(() => {
-    const { puzzle, solution } = generatePuzzle(size, 'medium');
+    const { puzzle } = generatePuzzle(size, 'medium');
     setBoard(puzzle);
     setOriginalBoard(puzzle.map(row => [...row]));
-    setSolution(solution);
     setFocusedCell(null);
     setErrors(new Set());
     setIsComplete(false);

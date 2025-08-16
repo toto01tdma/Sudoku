@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import BoardSizeSelection from './components/BoardSizeSelection';
-// @ts-ignore
 import SudokuGame from './components/SudokuGame';
 import PrintBoard from './components/PrintBoard';
 

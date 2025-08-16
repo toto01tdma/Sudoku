@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import { 
   SudokuBoard, 
   SudokuCell, 
@@ -19,7 +20,7 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
   const [board, setBoard] = useState<SudokuBoard>([]);
   const [originalBoard, setOriginalBoard] = useState<SudokuBoard>([]);
   const [solution, setSolution] = useState<SudokuBoard>([]);
-  const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
+  const [focusedCell, setFocusedCell] = useState<[number, number] | null>(null);
   const [errors, setErrors] = useState<Set<string>>(new Set());
   const [isComplete, setIsComplete] = useState(false);
 
@@ -29,135 +30,68 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
     setBoard(puzzle);
     setOriginalBoard(puzzle.map(row => [...row]));
     setSolution(solution);
-    setSelectedCell(null);
+    setFocusedCell(null);
     setErrors(new Set());
     setIsComplete(false);
   }, [size]);
 
-  const handleCellClick = (row: number, col: number) => {
-    // Only allow selection of empty cells or user-filled cells
-    if (originalBoard[row][col] === null) {
-      setSelectedCell([row, col]);
-    }
-  };
-
-  // Get all editable cell positions
-  const getEditableCells = () => {
-    const editableCells: [number, number][] = [];
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
-        if (originalBoard[row][col] === null) {
-          editableCells.push([row, col]);
-        }
+  // Focus the cell when focusedCell changes
+  useEffect(() => {
+    if (focusedCell) {
+      const [row, col] = focusedCell;
+      const cellElement = document.querySelector(
+        `div[data-row="${row}"][data-col="${col}"]`
+      ) as HTMLElement;
+      if (cellElement) {
+        cellElement.focus();
       }
     }
-    return editableCells;
+  }, [focusedCell]);
+
+  const handleCellClick = (row: number, col: number) => {
+    // Allow focusing on any cell
+    setFocusedCell([row, col]);
   };
 
-  // Handle keyboard navigation
+  // Handle keyboard navigation - works for all cells now
   const handleKeyDown = (e: React.KeyboardEvent, row: number, col: number) => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      // If it's a number key and this is an editable cell, handle input
+      if (originalBoard[row][col] === null && /^[1-9]$/.test(e.key)) {
+        const numValue = parseInt(e.key, 10);
+        if (numValue >= 1 && numValue <= size) {
+          handleCellChange(row, col, e.key);
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Handle deletion for editable cells
+        if (originalBoard[row][col] === null) {
+          handleCellChange(row, col, '');
+        }
+      }
       return;
     }
     
     e.preventDefault();
-    const editableCells = getEditableCells();
-    const currentIndex = editableCells.findIndex(([r, c]) => r === row && c === col);
     
-    if (currentIndex === -1) return;
-    
-    let newIndex = currentIndex;
+    let newRow = row;
+    let newCol = col;
     
     switch (e.key) {
       case 'ArrowUp':
-        // Find previous cell in same column or wrap around
-        for (let i = currentIndex - 1; i >= 0; i--) {
-          if (editableCells[i][1] === col) {
-            newIndex = i;
-            break;
-          }
-        }
-        // If no cell found above in same column, find last cell in same column
-        if (newIndex === currentIndex) {
-          for (let i = editableCells.length - 1; i > currentIndex; i--) {
-            if (editableCells[i][1] === col) {
-              newIndex = i;
-              break;
-            }
-          }
-        }
+        newRow = row > 0 ? row - 1 : size - 1;
         break;
-        
       case 'ArrowDown':
-        // Find next cell in same column or wrap around
-        for (let i = currentIndex + 1; i < editableCells.length; i++) {
-          if (editableCells[i][1] === col) {
-            newIndex = i;
-            break;
-          }
-        }
-        // If no cell found below in same column, find first cell in same column
-        if (newIndex === currentIndex) {
-          for (let i = 0; i < currentIndex; i++) {
-            if (editableCells[i][1] === col) {
-              newIndex = i;
-              break;
-            }
-          }
-        }
+        newRow = row < size - 1 ? row + 1 : 0;
         break;
-        
       case 'ArrowLeft':
-        // Find previous cell in same row or wrap around
-        for (let i = currentIndex - 1; i >= 0; i--) {
-          if (editableCells[i][0] === row) {
-            newIndex = i;
-            break;
-          }
-        }
-        // If no cell found left in same row, find last cell in same row
-        if (newIndex === currentIndex) {
-          for (let i = editableCells.length - 1; i > currentIndex; i--) {
-            if (editableCells[i][0] === row) {
-              newIndex = i;
-              break;
-            }
-          }
-        }
+        newCol = col > 0 ? col - 1 : size - 1;
         break;
-        
       case 'ArrowRight':
-        // Find next cell in same row or wrap around
-        for (let i = currentIndex + 1; i < editableCells.length; i++) {
-          if (editableCells[i][0] === row) {
-            newIndex = i;
-            break;
-          }
-        }
-        // If no cell found right in same row, find first cell in same row
-        if (newIndex === currentIndex) {
-          for (let i = 0; i < currentIndex; i++) {
-            if (editableCells[i][0] === row) {
-              newIndex = i;
-              break;
-            }
-          }
-        }
+        newCol = col < size - 1 ? col + 1 : 0;
         break;
     }
     
-    if (newIndex !== currentIndex) {
-      const [newRow, newCol] = editableCells[newIndex];
-      setSelectedCell([newRow, newCol]);
-      
-      // Focus the new cell
-      const newCellElement = document.querySelector(
-        `input[data-row="${newRow}"][data-col="${newCol}"]`
-      ) as HTMLInputElement;
-      if (newCellElement) {
-        newCellElement.focus();
-      }
-    }
+    setFocusedCell([newRow, newCol]);
   };
 
   const handleCellChange = (row: number, col: number, value: string) => {
@@ -173,22 +107,25 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
     newBoard[row][col] = numValue;
     setBoard(newBoard);
 
-    // Update errors
-    const newErrors = new Set(errors);
-    const errorKey = `${row}-${col}`;
-    
-    if (numValue !== null && !isValidMove(newBoard, row, col, numValue)) {
-      newErrors.add(errorKey);
-    } else {
-      newErrors.delete(errorKey);
-    }
-    
-    setErrors(newErrors);
-
-    // Don't auto-complete - let user press Check button
+    // Clear any previous errors since we're not checking during gameplay
+    setErrors(new Set());
   };
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
+    // Check if board is completely filled first
+    const isComplete = isBoardComplete(board);
+    
+    if (!isComplete) {
+      await Swal.fire({
+        title: 'Incomplete Puzzle',
+        text: 'Please fill in all empty cells before checking your solution.',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+    
+    // Only validate if board is complete
     const newErrors = new Set<string>();
     
     for (let row = 0; row < size; row++) {
@@ -202,22 +139,21 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
     
     setErrors(newErrors);
     
-    // Check if board is completely filled
-    const isComplete = isBoardComplete(board);
-    
-    if (newErrors.size === 0 && isComplete) {
+    if (newErrors.size === 0) {
       // Board is complete and valid - puzzle solved!
       setIsComplete(true);
-      alert('Congratulations! You solved the puzzle!');
-    } else if (newErrors.size > 0) {
-      alert(`Found ${newErrors.size} error(s). Check the highlighted cells.`);
-    } else if (!isComplete) {
-      alert('Good progress! Keep filling in the empty cells.');
+      await Swal.fire({
+        title: 'Congratulations!',
+        text: 'You solved the puzzle!',
+        icon: 'success',
+        confirmButtonText: 'Play Again'
+      });
     }
+    // No alert for errors - just highlight incorrect cells
   };
 
   const getCellClassName = (row: number, col: number) => {
-    let className = 'w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 border border-gray-400 text-center font-bold text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ';
+    let className = 'w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 border border-gray-400 text-center font-bold text-sm sm:text-base focus:outline-none cursor-pointer flex items-center justify-center ';
     
     // Add thicker borders for box boundaries
     if (size === 4) {
@@ -235,17 +171,23 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
     if (originalBoard[row][col] !== null) {
       className += 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 ';
     } else {
-      className += 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 ';
+      // User-entered cells - always blue during gameplay
+      if (errors.has(`${row}-${col}`) && isBoardComplete(board)) {
+        // Only show error styling after Check is pressed and board is complete
+        className += 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 ';
+      } else {
+        className += 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 ';
+      }
     }
     
-    // Selected cell
-    if (selectedCell && selectedCell[0] === row && selectedCell[1] === col) {
-      className += 'ring-2 ring-blue-500 ';
-    }
-    
-    // Error styling
-    if (errors.has(`${row}-${col}`)) {
-      className += 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 ';
+    // Focused cell - apply focus styling on top
+    if (focusedCell && focusedCell[0] === row && focusedCell[1] === col) {
+      className += 'ring-4 ring-blue-500 ring-opacity-50 ';
+      if (originalBoard[row][col] !== null) {
+        className += 'bg-blue-100 dark:bg-blue-800 ';
+      } else {
+        className += 'bg-blue-50 dark:bg-blue-900 ';
+      }
     }
     
     return className;
@@ -279,7 +221,7 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
             Sudoku {size}×{size}
           </h1>
-          {errors.size > 0 && (
+          {errors.size > 0 && isBoardComplete(board) && (
             <p className="text-red-600 dark:text-red-400 font-medium">
               {errors.size} error(s) found - check highlighted cells
             </p>
@@ -297,20 +239,17 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
             >
               {board.map((row, rowIndex) =>
                 row.map((cell, colIndex) => (
-                  <input
+                  <div
                     key={`${rowIndex}-${colIndex}`}
-                    type="text"
-                    value={cell || ''}
-                    onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
                     onClick={() => handleCellClick(rowIndex, colIndex)}
-                    onFocus={() => handleCellClick(rowIndex, colIndex)}
                     onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
                     className={getCellClassName(rowIndex, colIndex)}
-                    maxLength={1}
-                    disabled={originalBoard[rowIndex][colIndex] !== null}
+                    tabIndex={0}
                     data-row={rowIndex}
                     data-col={colIndex}
-                  />
+                  >
+                    {cell || ''}
+                  </div>
                 ))
               )}
             </div>
@@ -335,7 +274,10 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
           {/* Instructions */}
           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 max-w-md text-center text-sm text-gray-600 dark:text-gray-300">
             <p className="mb-2">
-              Fill empty cells with numbers 1-{size}
+              Click any cell to focus it, then use number keys (1-{size}) to enter values
+            </p>
+            <p className="mb-2">
+              Use arrow keys to navigate between cells
             </p>
             <p>
               Each row, column, and box must contain all numbers exactly once

@@ -12,9 +12,10 @@ import {
 interface SudokuGameProps {
   size: 4 | 6 | 9;
   onBack: () => void;
+  onPrintBoard?: () => void;
 }
 
-export default function SudokuGame({ size, onBack }: SudokuGameProps) {
+export default function SudokuGame({ size, onBack, onPrintBoard }: SudokuGameProps) {
   const [board, setBoard] = useState<SudokuBoard>([]);
   const [originalBoard, setOriginalBoard] = useState<SudokuBoard>([]);
   const [focusedCell, setFocusedCell] = useState<[number, number] | null>(null);
@@ -259,6 +260,14 @@ export default function SudokuGame({ size, onBack }: SudokuGameProps) {
             >
               Check
             </button>
+            {onPrintBoard && (
+              <button
+                onClick={onPrintBoard}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg"
+              >
+                Print Board
+              </button>
+            )}
             <button
               onClick={onBack}
               className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg"

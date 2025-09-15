@@ -15,9 +15,6 @@ export default function Home() {
     setGameMode('size-selection-play');
   };
 
-  const handlePrintBoard = () => {
-    setGameMode('size-selection-print');
-  };
 
   const handleSizeSelection = (size: 4 | 6 | 9, mode: 'play' | 'print') => {
     setBoardSize(size);
@@ -25,11 +22,17 @@ export default function Home() {
   };
 
   const handleBack = () => {
-    if (gameMode === 'play' || gameMode === 'print') {
-      setGameMode(gameMode === 'play' ? 'size-selection-play' : 'size-selection-print');
+    if (gameMode === 'play') {
+      setGameMode('size-selection-play');
+    } else if (gameMode === 'print') {
+      setGameMode('play');
     } else {
       setGameMode('menu');
     }
+  };
+
+  const handlePrintFromGame = () => {
+    setGameMode('print');
   };
 
   const handleBackToMenu = () => {
@@ -52,12 +55,6 @@ export default function Home() {
               Start Game
             </button>
             
-            <button
-              onClick={handlePrintBoard}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-lg text-xl transition-colors duration-200 shadow-lg"
-            >
-              Print Board
-            </button>
           </div>
         </div>
       </div>
@@ -80,6 +77,7 @@ export default function Home() {
       <SudokuGame
         size={boardSize}
         onBack={handleBack}
+        onPrintBoard={handlePrintFromGame}
       />
     );
   }

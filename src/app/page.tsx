@@ -3,22 +3,25 @@
 import { useState } from 'react';
 import BoardSizeSelection from './components/BoardSizeSelection';
 import SudokuGame from './components/SudokuGame';
+import { SudokuType, SudokuSize } from './components/table_board/types';
 import PrintBoard from './components/PrintBoard';
 
 type GameMode = 'menu' | 'play' | 'print' | 'size-selection-play' | 'size-selection-print';
 
 export default function Home() {
   const [gameMode, setGameMode] = useState<GameMode>('menu');
-  const [boardSize, setBoardSize] = useState<4 | 6 | 9>(9);
+  const [boardSize, setBoardSize] = useState<SudokuSize>(9);
+  const [sudokuType, setSudokuType] = useState<SudokuType>('classic');
 
   const handleStartGame = () => {
     setGameMode('size-selection-play');
   };
 
 
-  const handleSizeSelection = (size: 4 | 6 | 9, mode: 'play' | 'print') => {
+  const handleSizeSelection = (size: SudokuSize, type: SudokuType) => {
     setBoardSize(size);
-    setGameMode(mode);
+    setSudokuType(type);
+    setGameMode('play');
   };
 
   const handleBack = () => {
@@ -61,13 +64,12 @@ export default function Home() {
     );
   }
 
-  if (gameMode === 'size-selection-play' || gameMode === 'size-selection-print') {
-    const mode = gameMode === 'size-selection-play' ? 'play' : 'print';
+  if (gameMode === 'size-selection-play') {
     return (
       <BoardSizeSelection
-        onSizeSelect={(size) => handleSizeSelection(size, mode)}
+        onSizeSelect={handleSizeSelection}
         onBack={handleBackToMenu}
-        mode={mode}
+        mode="play"
       />
     );
   }
@@ -76,6 +78,7 @@ export default function Home() {
     return (
       <SudokuGame
         size={boardSize}
+        sudokuType={sudokuType}
         onBack={handleBack}
         onPrintBoard={handlePrintFromGame}
       />
@@ -86,6 +89,7 @@ export default function Home() {
     return (
       <PrintBoard
         size={boardSize}
+        sudokuType={sudokuType}
         onBack={handleBack}
       />
     );

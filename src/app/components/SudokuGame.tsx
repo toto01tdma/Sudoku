@@ -2,35 +2,33 @@
 
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import { 
-  SudokuBoard, 
-  generatePuzzle, 
-  isValidMove, 
-  isBoardComplete
-} from '../utils/sudokuLogic';
+import { SudokuBoard, SudokuType, getSudokuType } from './table_board';
+import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard } from './table_board';
 
 interface SudokuGameProps {
   size: 4 | 6 | 9;
+  sudokuType: SudokuType;
   onBack: () => void;
   onPrintBoard?: () => void;
 }
 
-export default function SudokuGame({ size, onBack, onPrintBoard }: SudokuGameProps) {
+export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: SudokuGameProps) {
   const [board, setBoard] = useState<SudokuBoard>([]);
   const [originalBoard, setOriginalBoard] = useState<SudokuBoard>([]);
   const [focusedCell, setFocusedCell] = useState<[number, number] | null>(null);
   const [errors, setErrors] = useState<Set<string>>(new Set());
   const [isComplete, setIsComplete] = useState(false);
 
-  // Generate new puzzle when component mounts or size changes
+  // Generate new puzzle when component mounts or size/type changes
   useEffect(() => {
-    const { puzzle } = generatePuzzle(size, 'medium');
-    setBoard(puzzle);
-    setOriginalBoard(puzzle.map(row => [...row]));
+    const sudokuConfig = getSudokuType(sudokuType);
+    const { puzzle } = sudokuConfig.generator.generatePuzzle(size, 'medium');
+    setBoard(puzzle as any);
+    setOriginalBoard(puzzle.map(row => [...row]) as any);
     setFocusedCell(null);
     setErrors(new Set());
     setIsComplete(false);
-  }, [size]);
+  }, [size, sudokuType]);
 
   // Focus the cell when focusedCell changes
   useEffect(() => {
@@ -95,13 +93,33 @@ export default function SudokuGame({ size, onBack, onPrintBoard }: SudokuGamePro
     if (originalBoard[row][col] !== null) return; // Can't change original clues
 
     const newBoard = board.map(r => [...r]);
-    const numValue = value === '' ? null : parseInt(value, 10);
     
-    if (numValue !== null && (numValue < 1 || numValue > size || isNaN(numValue))) {
-      return; // Invalid number
+    if (sudokuType === 'alphabet') {
+      // Handle letter input for Alphabet Sudoku
+      if (value === '') {
+        newBoard[row][col] = null;
+      } else if (/^[A-Z]$/.test(value)) {
+        // Direct letter input
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        if (letters.indexOf(value) < size) {
+          newBoard[row][col] = value as any;
+        } else {
+          return; // Invalid letter for this board size
+        }
+      } else {
+        return; // Invalid input
+      }
+    } else {
+      // Handle number input for other Sudoku types
+      const numValue = value === '' ? null : parseInt(value, 10);
+      
+      if (numValue !== null && (numValue < 1 || numValue > size || isNaN(numValue))) {
+        return; // Invalid number
+      }
+
+      newBoard[row][col] = numValue;
     }
 
-    newBoard[row][col] = numValue;
     setBoard(newBoard);
 
     // Clear any previous errors since we're not checking during gameplay
@@ -109,8 +127,9 @@ export default function SudokuGame({ size, onBack, onPrintBoard }: SudokuGamePro
   };
 
   const handleCheck = async () => {
+    const sudokuConfig = getSudokuType(sudokuType);
     // Check if board is completely filled first
-    const isComplete = isBoardComplete(board);
+    const isComplete = sudokuConfig.generator.isBoardComplete(board);
     
     if (!isComplete) {
       await Swal.fire({
@@ -128,7 +147,7 @@ export default function SudokuGame({ size, onBack, onPrintBoard }: SudokuGamePro
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) {
         const cell = board[row][col];
-        if (cell !== null && !isValidMove(board, row, col, cell)) {
+        if (cell !== null && !sudokuConfig.generator.isValidMove(board, row, col, cell as any)) {
           newErrors.add(`${row}-${col}`);
         }
       }
@@ -149,46 +168,6 @@ export default function SudokuGame({ size, onBack, onPrintBoard }: SudokuGamePro
     // No alert for errors - just highlight incorrect cells
   };
 
-  const getCellClassName = (row: number, col: number) => {
-    let className = 'w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 border border-gray-400 text-center font-bold text-sm sm:text-base focus:outline-none cursor-pointer flex items-center justify-center ';
-    
-    // Add thicker borders for box boundaries
-    if (size === 4) {
-      if (row === 1) className += 'border-b-2 border-b-gray-600 ';
-      if (col === 1) className += 'border-r-2 border-r-gray-600 ';
-    } else if (size === 6) {
-      if (row === 1 || row === 3) className += 'border-b-2 border-b-gray-600 ';
-      if (col === 2) className += 'border-r-2 border-r-gray-600 ';
-    } else if (size === 9) {
-      if (row === 2 || row === 5) className += 'border-b-2 border-b-gray-600 ';
-      if (col === 2 || col === 5) className += 'border-r-2 border-r-gray-600 ';
-    }
-    
-    // Original clue styling
-    if (originalBoard[row][col] !== null) {
-      className += 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 ';
-    } else {
-      // User-entered cells - always blue during gameplay
-      if (errors.has(`${row}-${col}`) && isBoardComplete(board)) {
-        // Only show error styling after Check is pressed and board is complete
-        className += 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 ';
-      } else {
-        className += 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 ';
-      }
-    }
-    
-    // Focused cell - apply focus styling on top
-    if (focusedCell && focusedCell[0] === row && focusedCell[1] === col) {
-      className += 'ring-4 ring-blue-500 ring-opacity-50 ';
-      if (originalBoard[row][col] !== null) {
-        className += 'bg-blue-100 dark:bg-blue-800 ';
-      } else {
-        className += 'bg-blue-50 dark:bg-blue-900 ';
-      }
-    }
-    
-    return className;
-  };
 
   if (isComplete) {
     return (
@@ -216,9 +195,9 @@ export default function SudokuGame({ size, onBack, onPrintBoard }: SudokuGamePro
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-            Sudoku {size}×{size}
+            {getSudokuType(sudokuType).name} {size}×{size}
           </h1>
-          {errors.size > 0 && isBoardComplete(board) && (
+          {errors.size > 0 && getSudokuType(sudokuType).generator.isBoardComplete(board) && (
             <p className="text-red-600 dark:text-red-400 font-medium">
               {errors.size} error(s) found - check highlighted cells
             </p>
@@ -228,28 +207,29 @@ export default function SudokuGame({ size, onBack, onPrintBoard }: SudokuGamePro
         <div className="flex flex-col items-center gap-6">
           {/* Game Board */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xl">
-            <div 
-              className="grid gap-0 border-2 border-gray-600"
-              style={{
-                gridTemplateColumns: `repeat(${size}, 1fr)`,
-              }}
-            >
-              {board.map((row, rowIndex) =>
-                row.map((cell, colIndex) => (
-                  <div
-                    key={`${rowIndex}-${colIndex}`}
-                    onClick={() => handleCellClick(rowIndex, colIndex)}
-                    onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
-                    className={getCellClassName(rowIndex, colIndex)}
-                    tabIndex={0}
-                    data-row={rowIndex}
-                    data-col={colIndex}
-                  >
-                    {cell || ''}
-                  </div>
-                ))
-              )}
-            </div>
+            {(() => {
+              const boardProps = {
+                board: board as any,
+                size,
+                isInteractive: true,
+                originalBoard: originalBoard as any,
+                focusedCell,
+                errors,
+                onCellClick: handleCellClick,
+                onKeyDown: handleKeyDown
+              };
+
+              switch (sudokuType) {
+                case 'diagonal':
+                  return <DiagonalSudokuBoard {...boardProps} />;
+                case 'alphabet':
+                  return <AlphabetSudokuBoard {...boardProps} />;
+                case 'even-odd':
+                  return <EvenOddSudokuBoard {...boardProps} />;
+                default:
+                  return <ClassicSudokuBoard {...boardProps} />;
+              }
+            })()}
           </div>
 
           {/* Control Buttons */}

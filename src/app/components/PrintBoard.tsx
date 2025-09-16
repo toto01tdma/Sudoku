@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { SudokuBoard, generatePuzzle } from '../utils/sudokuLogic';
+import { SudokuBoard, SudokuBoardComponent, SudokuType, getSudokuType } from './table_board';
+import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard } from './table_board';
 
 interface PrintBoardProps {
   size: 4 | 6 | 9;
+  sudokuType: SudokuType;
   onBack: () => void;
 }
 
-export default function PrintBoard({ size, onBack }: PrintBoardProps) {
+export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps) {
   const [boards, setBoards] = useState<SudokuBoard[]>([]);
   const [solutions, setSolutions] = useState<SudokuBoard[]>([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -20,13 +22,14 @@ export default function PrintBoard({ size, onBack }: PrintBoardProps) {
   // Generate multiple puzzles when component mounts, size changes, or grid count changes
   useEffect(() => {
     const generateMultiplePuzzles = () => {
+      const sudokuConfig = getSudokuType(sudokuType);
       const newBoards: SudokuBoard[] = [];
       const newSolutions: SudokuBoard[] = [];
       
       for (let i = 0; i < printSettings.gridCount; i++) {
-        const { puzzle, solution } = generatePuzzle(size, 'medium');
-        newBoards.push(puzzle);
-        newSolutions.push(solution);
+        const { puzzle, solution } = sudokuConfig.generator.generatePuzzle(size, 'medium');
+        newBoards.push(puzzle as any);
+        newSolutions.push(solution as any);
       }
       
       setBoards(newBoards);
@@ -35,7 +38,7 @@ export default function PrintBoard({ size, onBack }: PrintBoardProps) {
     
     generateMultiplePuzzles();
     setShowPreview(false);
-  }, [size, printSettings.gridCount]);
+  }, [size, sudokuType, printSettings.gridCount]);
 
   const handlePrint = () => {
     if (showPreview) {
@@ -45,73 +48,6 @@ export default function PrintBoard({ size, onBack }: PrintBoardProps) {
     }
   };
 
-  const getCellValue = (board: SudokuBoard, row: number, col: number) => {
-    const value = board[row][col];
-    return value || '';
-  };
-
-  const getCellClassName = (row: number, col: number, isPreview = false, isPrint = false) => {
-    let baseSize;
-    if (isPrint) {
-      // Smaller cells for 2-per-row layout on A4 paper
-      baseSize = size === 9 ? 'w-[32px] h-[32px] text-sm' : size === 6 ? 'w-[44px] h-[44px] text-base' : 'w-[60px] h-[60px] text-lg';
-    } else if (isPreview) {
-      // Adjusted for preview with 2-per-row layout
-      baseSize = size === 9 ? 'w-8 h-8 text-sm' : size === 6 ? 'w-10 h-10 text-base' : 'w-12 h-12 text-lg';
-    } else {
-      baseSize = 'w-10 h-10 md:w-12 md:h-12 text-base'; // Normal for editing
-    }
-    
-    let className = `${baseSize} outline outline-1 outline-gray-400 text-center font-bold flex items-center justify-center `;
-    
-    // Add thicker outlines for box boundaries
-    if (size === 4) {
-      if (row === 1) className += 'border-b-2 border-b-gray-600 ';
-      if (col === 1) className += 'border-r-2 border-r-gray-600 ';
-    } else if (size === 6) {
-      if (row === 1 || row === 3) className += 'border-b-2 border-b-gray-600 ';
-      if (col === 2) className += 'border-r-2 border-r-gray-600 ';
-    } else if (size === 9) {
-      if (row === 2 || row === 5) className += 'border-b-2 border-b-gray-600 ';
-      if (col === 2 || col === 5) className += 'border-r-2 border-r-gray-600 ';
-    }
-    
-    if (isPreview || isPrint) {
-      className += 'bg-white text-black ';
-    } else {
-      className += 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ';
-    }
-    
-    return className;
-  };
-
-  const renderBoard = (boardToRender: SudokuBoard, title: string, isPreview = false, isPrint = false, showTitle = true) => (
-    <div className={`${isPreview ? 'mb-8' : 'mb-6'} mx-auto`}>
-      {/* {showTitle && title && (
-        <h3 className={`${isPreview ? 'text-xl mb-4' : 'text-2xl mb-4'} font-bold text-center ${isPreview || isPrint ? 'text-black' : 'text-gray-800 dark:text-white'}`}>
-          {title}
-        </h3>
-      )} */}
-      <div 
-        className="grid gap-0 outline outline-2 outline-gray-600 mx-auto"
-        style={{
-          gridTemplateColumns: `repeat(${size}, 1fr)`,
-          width: 'fit-content'
-        }}
-      >
-        {boardToRender.map((row, rowIndex) =>
-          row.map((_, colIndex) => (
-            <div
-              key={`${rowIndex}-${colIndex}`}
-              className={getCellClassName(rowIndex, colIndex, isPreview, isPrint)}
-            >
-              {getCellValue(boardToRender, rowIndex, colIndex)}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
 
   if (showPreview) {
     return (
@@ -129,7 +65,26 @@ export default function PrintBoard({ size, onBack }: PrintBoardProps) {
                       
                       return (
                         <div key={`puzzle-${gridIndex}`} className="grid-item flex-1">
-                          {renderBoard(boards[gridIndex] || [], '', true, true, false)}
+                               {(() => {
+                                 const boardProps = {
+                                   board: (boards[gridIndex] || []) as any,
+                                   size,
+                                   isPreview: true,
+                                   isPrint: true,
+                                   showTitle: false
+                                 };
+
+                                 switch (sudokuType) {
+                                   case 'diagonal':
+                                     return <DiagonalSudokuBoard {...boardProps} />;
+                                   case 'alphabet':
+                                     return <AlphabetSudokuBoard {...boardProps} />;
+                                   case 'even-odd':
+                                     return <EvenOddSudokuBoard {...boardProps} />;
+                                   default:
+                                     return <ClassicSudokuBoard {...boardProps} />;
+                                 }
+                               })()}
                         </div>
                       );
                     })}
@@ -150,7 +105,27 @@ export default function PrintBoard({ size, onBack }: PrintBoardProps) {
                           
                           return (
                             <div key={`solution-${solutionIndex}`} className="grid-item flex-1">
-                              {renderBoard(solutions[solutionIndex], `Solution ${solutionIndex + 1}`, true, true, true)}
+                                   {(() => {
+                                     const boardProps = {
+                                       board: solutions[solutionIndex] as any,
+                                       size,
+                                       title: `Solution ${solutionIndex + 1}`,
+                                       isPreview: true,
+                                       isPrint: true,
+                                       showTitle: true
+                                     };
+
+                                     switch (sudokuType) {
+                                       case 'diagonal':
+                                         return <DiagonalSudokuBoard {...boardProps} />;
+                                       case 'alphabet':
+                                         return <AlphabetSudokuBoard {...boardProps} />;
+                                       case 'even-odd':
+                                         return <EvenOddSudokuBoard {...boardProps} />;
+                                       default:
+                                         return <ClassicSudokuBoard {...boardProps} />;
+                                     }
+                                   })()}
                             </div>
                           );
                         })}
@@ -287,7 +262,25 @@ export default function PrintBoard({ size, onBack }: PrintBoardProps) {
         <div className="flex flex-col items-center gap-8">
           {/* Board Preview */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl">
-            {renderBoard(boards[0] || [], 'Puzzle Preview')}
+                 {(() => {
+                   const boardProps = {
+                     board: (boards[0] || []) as any,
+                     size,
+                     title: `${getSudokuType(sudokuType).name} Preview`,
+                     showTitle: true
+                   };
+
+                   switch (sudokuType) {
+                     case 'diagonal':
+                       return <DiagonalSudokuBoard {...boardProps} />;
+                     case 'alphabet':
+                       return <AlphabetSudokuBoard {...boardProps} />;
+                     case 'even-odd':
+                       return <EvenOddSudokuBoard {...boardProps} />;
+                     default:
+                       return <ClassicSudokuBoard {...boardProps} />;
+                   }
+                 })()}
           </div>
 
           {/* Print Settings */}

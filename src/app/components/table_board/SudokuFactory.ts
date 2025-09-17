@@ -1,4 +1,4 @@
-import { SudokuType, SudokuTypeConfig, SudokuSize } from './types';
+import { SudokuType, SudokuTypeConfig, SudokuBoard, SudokuSize, Difficulty, SudokuGenerator } from './types';
 import * as ClassicSudoku from './classic_sudoku_board/SudokuGenerator';
 import * as DiagonalSudoku from './diagonal_sudoku_board/SudokuGenerator';
 import * as AlphabetSudoku from './alphabet_sudoku_board/SudokuGenerator';
@@ -12,13 +12,16 @@ export const SUDOKU_TYPES: Record<SudokuType, SudokuTypeConfig> = {
     description: 'Traditional Sudoku with standard rules',
     availableSizes: [4, 6, 9],
     generator: {
-      generatePuzzle: ClassicSudoku.generatePuzzle as any,
-      isValidMove: (board: any, row: number, col: number, value: number | string) => {
+      generatePuzzle: (size: SudokuSize, difficulty?: Difficulty) => {
+        const result = ClassicSudoku.generatePuzzle(size, difficulty);
+        return { puzzle: result.puzzle as SudokuBoard, solution: result.solution as SudokuBoard };
+      },
+      isValidMove: (board: SudokuBoard, row: number, col: number, value: number | string) => {
         return ClassicSudoku.isValidMove(board, row, col, value as number);
       },
-      validateBoard: ClassicSudoku.validateBoard as any,
-      isBoardComplete: ClassicSudoku.isBoardComplete as any,
-      isBoardSolved: ClassicSudoku.isBoardSolved as any,
+      validateBoard: (board: SudokuBoard) => ClassicSudoku.validateBoard(board),
+      isBoardComplete: (board: SudokuBoard) => ClassicSudoku.isBoardComplete(board),
+      isBoardSolved: (board: SudokuBoard) => ClassicSudoku.isBoardSolved(board),
     }
   },
   diagonal: {
@@ -27,13 +30,16 @@ export const SUDOKU_TYPES: Record<SudokuType, SudokuTypeConfig> = {
     description: 'Sudoku with additional diagonal constraints',
     availableSizes: [4, 6, 9],
     generator: {
-      generatePuzzle: DiagonalSudoku.generatePuzzle as any,
-      isValidMove: (board: any, row: number, col: number, value: number | string) => {
+      generatePuzzle: (size: SudokuSize, difficulty?: Difficulty) => {
+        const result = DiagonalSudoku.generatePuzzle(size, difficulty);
+        return { puzzle: result.puzzle as SudokuBoard, solution: result.solution as SudokuBoard };
+      },
+      isValidMove: (board: SudokuBoard, row: number, col: number, value: number | string) => {
         return DiagonalSudoku.isValidMove(board, row, col, value as number);
       },
-      validateBoard: DiagonalSudoku.validateBoard as any,
-      isBoardComplete: DiagonalSudoku.isBoardComplete as any,
-      isBoardSolved: DiagonalSudoku.isBoardSolved as any,
+      validateBoard: (board: SudokuBoard) => DiagonalSudoku.validateBoard(board),
+      isBoardComplete: (board: SudokuBoard) => DiagonalSudoku.isBoardComplete(board),
+      isBoardSolved: (board: SudokuBoard) => DiagonalSudoku.isBoardSolved(board),
     }
   },
   // Placeholder for future implementations
@@ -43,13 +49,16 @@ export const SUDOKU_TYPES: Record<SudokuType, SudokuTypeConfig> = {
     description: 'Sudoku using letters instead of numbers',
     availableSizes: [4, 6, 9],
     generator: {
-      generatePuzzle: AlphabetSudoku.generatePuzzle as any,
-      isValidMove: (board: any, row: number, col: number, value: number | string) => {
+      generatePuzzle: (size: SudokuSize, difficulty?: Difficulty) => {
+        const result = AlphabetSudoku.generatePuzzle(size, difficulty);
+        return { puzzle: result.puzzle as SudokuBoard, solution: result.solution as SudokuBoard };
+      },
+      isValidMove: (board: SudokuBoard, row: number, col: number, value: number | string) => {
         return AlphabetSudoku.isValidMove(board, row, col, value as string);
       },
-      validateBoard: AlphabetSudoku.validateBoard as any,
-      isBoardComplete: AlphabetSudoku.isBoardComplete as any,
-      isBoardSolved: AlphabetSudoku.isBoardSolved as any,
+      validateBoard: (board: SudokuBoard) => AlphabetSudoku.validateBoard(board),
+      isBoardComplete: (board: SudokuBoard) => AlphabetSudoku.isBoardComplete(board),
+      isBoardSolved: (board: SudokuBoard) => AlphabetSudoku.isBoardSolved(board),
     }
   },
   jigsaw: {
@@ -71,13 +80,16 @@ export const SUDOKU_TYPES: Record<SudokuType, SudokuTypeConfig> = {
     description: 'Sudoku with even/odd constraints',
     availableSizes: [4, 6, 9],
     generator: {
-      generatePuzzle: EvenOddSudoku.generatePuzzle as any,
-      isValidMove: (board: any, row: number, col: number, value: number | string) => {
+      generatePuzzle: (size: SudokuSize, difficulty?: Difficulty) => {
+        const result = EvenOddSudoku.generatePuzzle(size, difficulty);
+        return { puzzle: result.puzzle as SudokuBoard, solution: result.solution as SudokuBoard };
+      },
+      isValidMove: (board: SudokuBoard, row: number, col: number, value: number | string) => {
         return EvenOddSudoku.isValidMove(board, row, col, value as number);
       },
-      validateBoard: EvenOddSudoku.validateBoard as any,
-      isBoardComplete: EvenOddSudoku.isBoardComplete as any,
-      isBoardSolved: EvenOddSudoku.isBoardSolved as any,
+      validateBoard: (board: SudokuBoard) => EvenOddSudoku.validateBoard(board),
+      isBoardComplete: (board: SudokuBoard) => EvenOddSudoku.isBoardComplete(board),
+      isBoardSolved: (board: SudokuBoard) => EvenOddSudoku.isBoardSolved(board),
     }
   },
   consecutive: {

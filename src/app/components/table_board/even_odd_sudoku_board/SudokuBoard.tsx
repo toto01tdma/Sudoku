@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { SudokuBoard as SudokuBoardType, isShadedCell, getValidNumbersForCell } from './SudokuGenerator';
+import { SudokuBoard as SudokuBoardType } from '../types';
+import { isShadedCell, getValidNumbersForCell } from './SudokuGenerator';
 
 interface SudokuBoardProps {
   board: SudokuBoardType;

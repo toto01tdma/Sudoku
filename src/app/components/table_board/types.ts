@@ -2,6 +2,9 @@
 export type SudokuCell = number | string | null;
 export type SudokuBoard = SudokuCell[][];
 
+// Union type for board compatibility across different Sudoku types
+export type AnyBoard = SudokuBoard;
+
 export type SudokuType = 'classic' | 'diagonal' | 'alphabet' | 'jigsaw' | 'even-odd' | 'consecutive' | 'asterisk' | 'thai-alphabet' | 'diagonal-jigsaw' | 'windoku';
 
 export type SudokuSize = 4 | 6 | 9;

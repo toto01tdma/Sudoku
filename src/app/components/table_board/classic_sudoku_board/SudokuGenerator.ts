@@ -1,5 +1,6 @@
-export type SudokuCell = number | null;
-export type SudokuBoard = SudokuCell[][];
+import { SudokuCell, SudokuBoard } from '../types';
+
+export type { SudokuCell, SudokuBoard };
 
 // Helper function to create empty board
 export function createEmptyBoard(size: number): SudokuBoard {

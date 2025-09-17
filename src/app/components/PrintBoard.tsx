@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { SudokuBoard, SudokuBoardComponent, SudokuType, getSudokuType } from './table_board';
+import { SudokuBoard, SudokuType, getSudokuType, AnyBoard } from './table_board';
 import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard } from './table_board';
 
 interface PrintBoardProps {
@@ -28,8 +28,8 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
       
       for (let i = 0; i < printSettings.gridCount; i++) {
         const { puzzle, solution } = sudokuConfig.generator.generatePuzzle(size, 'medium');
-        newBoards.push(puzzle as any);
-        newSolutions.push(solution as any);
+        newBoards.push(puzzle as AnyBoard);
+        newSolutions.push(solution as AnyBoard);
       }
       
       setBoards(newBoards);
@@ -67,7 +67,7 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
                         <div key={`puzzle-${gridIndex}`} className="grid-item flex-1">
                                {(() => {
                                  const boardProps = {
-                                   board: (boards[gridIndex] || []) as any,
+                                   board: (boards[gridIndex] || []) as AnyBoard,
                                    size,
                                    isPreview: true,
                                    isPrint: true,
@@ -107,7 +107,7 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
                             <div key={`solution-${solutionIndex}`} className="grid-item flex-1">
                                    {(() => {
                                      const boardProps = {
-                                       board: solutions[solutionIndex] as any,
+                                       board: solutions[solutionIndex] as AnyBoard,
                                        size,
                                        title: `Solution ${solutionIndex + 1}`,
                                        isPreview: true,
@@ -264,7 +264,7 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl">
                  {(() => {
                    const boardProps = {
-                     board: (boards[0] || []) as any,
+                     board: (boards[0] || []) as AnyBoard,
                      size,
                      title: `${getSudokuType(sudokuType).name} Preview`,
                      showTitle: true

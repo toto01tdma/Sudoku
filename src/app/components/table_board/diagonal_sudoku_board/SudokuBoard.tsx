@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { SudokuBoard as SudokuBoardType, isOnDiagonal } from './SudokuGenerator';
+import { SudokuBoard as SudokuBoardType } from '../types';
+import { isOnDiagonal } from './SudokuGenerator';
 
 interface SudokuBoardProps {
   board: SudokuBoardType;

@@ -14,7 +14,6 @@ export default function BoardSizeSelection({ onSizeSelect, onBack, mode }: Board
   const [selectedType, setSelectedType] = useState<SudokuType>('classic');
   const [showSizeSelection, setShowSizeSelection] = useState(false);
   
-  const title = mode === 'play' ? 'Select Sudoku Type & Size to Play' : 'Select Sudoku Type & Size to Print';
   const sudokuTypes = getImplementedSudokuTypes();
   
   const sizeOptions = [

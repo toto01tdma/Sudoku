@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import { SudokuBoard, SudokuType, getSudokuType } from './table_board';
+import { SudokuBoard, SudokuType, getSudokuType, AnyBoard } from './table_board';
 import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard } from './table_board';
 
 interface SudokuGameProps {
@@ -23,8 +23,8 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
   useEffect(() => {
     const sudokuConfig = getSudokuType(sudokuType);
     const { puzzle } = sudokuConfig.generator.generatePuzzle(size, 'medium');
-    setBoard(puzzle as any);
-    setOriginalBoard(puzzle.map(row => [...row]) as any);
+    setBoard(puzzle as AnyBoard);
+    setOriginalBoard(puzzle.map(row => [...row]) as AnyBoard);
     setFocusedCell(null);
     setErrors(new Set());
     setIsComplete(false);
@@ -102,7 +102,7 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
         // Direct letter input
         const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         if (letters.indexOf(value) < size) {
-          newBoard[row][col] = value as any;
+          newBoard[row][col] = value;
         } else {
           return; // Invalid letter for this board size
         }
@@ -147,7 +147,7 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) {
         const cell = board[row][col];
-        if (cell !== null && !sudokuConfig.generator.isValidMove(board, row, col, cell as any)) {
+        if (cell !== null && !sudokuConfig.generator.isValidMove(board, row, col, cell)) {
           newErrors.add(`${row}-${col}`);
         }
       }
@@ -209,10 +209,10 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xl">
             {(() => {
               const boardProps = {
-                board: board as any,
+                board: board as AnyBoard,
                 size,
                 isInteractive: true,
-                originalBoard: originalBoard as any,
+                originalBoard: originalBoard as AnyBoard,
                 focusedCell,
                 errors,
                 onCellClick: handleCellClick,

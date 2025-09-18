@@ -1,8 +1,10 @@
-import { SudokuType, SudokuTypeConfig, SudokuBoard, SudokuSize, Difficulty, SudokuGenerator } from './types';
+import { SudokuType, SudokuTypeConfig, SudokuBoard, SudokuSize, Difficulty } from './types';
 import * as ClassicSudoku from './classic_sudoku_board/SudokuGenerator';
 import * as DiagonalSudoku from './diagonal_sudoku_board/SudokuGenerator';
 import * as AlphabetSudoku from './alphabet_sudoku_board/SudokuGenerator';
 import * as EvenOddSudoku from './even_odd_sudoku_board/SudokuGenerator';
+import * as ThaiAlphabetSudoku from './thai_alphabet_sudoku_board/SudokuGenerator';
+import * as ConsecutiveSudoku from './consecutive_sudoku_board/SudokuGenerator';
 
 // Sudoku type configurations
 export const SUDOKU_TYPES: Record<SudokuType, SudokuTypeConfig> = {
@@ -96,13 +98,24 @@ export const SUDOKU_TYPES: Record<SudokuType, SudokuTypeConfig> = {
     id: 'consecutive',
     name: 'Consecutive Sudoku',
     description: 'Sudoku with consecutive number constraints',
-    availableSizes: [9],
+    availableSizes: [4, 6, 9],
     generator: {
-      generatePuzzle: ClassicSudoku.generatePuzzle, // Temporary fallback
-      isValidMove: ClassicSudoku.isValidMove,
-      validateBoard: ClassicSudoku.validateBoard,
-      isBoardComplete: ClassicSudoku.isBoardComplete,
-      isBoardSolved: ClassicSudoku.isBoardSolved,
+      generatePuzzle: (size: SudokuSize, difficulty?: Difficulty) => {
+        const result = ConsecutiveSudoku.generatePuzzle(size, difficulty);
+        return { 
+          puzzle: result.puzzle as SudokuBoard, 
+          solution: result.solution as SudokuBoard,
+          constraints: result.constraints 
+        };
+      },
+      isValidMove: (board: SudokuBoard, row: number, col: number, value: number | string) => {
+        // For consecutive sudoku, we need constraints, but this is a simplified check
+        // The actual validation will be done in the component with full constraints
+        return ClassicSudoku.isValidMove(board, row, col, value as number);
+      },
+      validateBoard: (board: SudokuBoard) => ClassicSudoku.validateBoard(board),
+      isBoardComplete: (board: SudokuBoard) => ConsecutiveSudoku.isBoardComplete(board),
+      isBoardSolved: (board: SudokuBoard) => ConsecutiveSudoku.isBoardComplete(board),
     }
   },
   asterisk: {
@@ -122,13 +135,18 @@ export const SUDOKU_TYPES: Record<SudokuType, SudokuTypeConfig> = {
     id: 'thai-alphabet',
     name: 'Thai Alphabet Sudoku',
     description: 'Sudoku using Thai alphabet characters',
-    availableSizes: [9],
+    availableSizes: [4, 6, 9],
     generator: {
-      generatePuzzle: ClassicSudoku.generatePuzzle, // Temporary fallback
-      isValidMove: ClassicSudoku.isValidMove,
-      validateBoard: ClassicSudoku.validateBoard,
-      isBoardComplete: ClassicSudoku.isBoardComplete,
-      isBoardSolved: ClassicSudoku.isBoardSolved,
+      generatePuzzle: (size: SudokuSize, difficulty?: Difficulty) => {
+        const result = ThaiAlphabetSudoku.generatePuzzle(size, difficulty);
+        return { puzzle: result.puzzle as SudokuBoard, solution: result.solution as SudokuBoard };
+      },
+      isValidMove: (board: SudokuBoard, row: number, col: number, value: number | string) => {
+        return ThaiAlphabetSudoku.isValidMove(board, row, col, value as string);
+      },
+      validateBoard: (board: SudokuBoard) => ThaiAlphabetSudoku.validateBoard(board),
+      isBoardComplete: (board: SudokuBoard) => ThaiAlphabetSudoku.isBoardComplete(board),
+      isBoardSolved: (board: SudokuBoard) => ThaiAlphabetSudoku.isBoardSolved(board),
     }
   },
   'diagonal-jigsaw': {
@@ -171,10 +189,20 @@ export function getAllSudokuTypes(): SudokuTypeConfig[] {
 
 // Get implemented Sudoku types
 export function getImplementedSudokuTypes(): SudokuTypeConfig[] {
-  return [SUDOKU_TYPES.classic, SUDOKU_TYPES.diagonal, SUDOKU_TYPES.alphabet, SUDOKU_TYPES['even-odd']];
+  return [
+    SUDOKU_TYPES.classic, 
+    SUDOKU_TYPES.diagonal, 
+    SUDOKU_TYPES.alphabet, 
+    SUDOKU_TYPES['even-odd'],
+    SUDOKU_TYPES['thai-alphabet']
+  ];
 }
 
 // Check if a Sudoku type is implemented
 export function isSudokuTypeImplemented(type: SudokuType): boolean {
-  return type === 'classic' || type === 'diagonal' || type === 'alphabet' || type === 'even-odd';
+  return type === 'classic' || 
+         type === 'diagonal' || 
+         type === 'alphabet' || 
+         type === 'even-odd' ||
+         type === 'thai-alphabet';
 }

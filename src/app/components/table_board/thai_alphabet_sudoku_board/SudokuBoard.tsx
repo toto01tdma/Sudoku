@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SudokuBoard as SudokuBoardType } from '../types';
-import { isOnDiagonal } from './SudokuGenerator';
+import { getThaiCharactersForSize } from './SudokuGenerator';
 
 interface SudokuBoardProps {
   board: SudokuBoardType;
@@ -19,7 +19,7 @@ interface SudokuBoardProps {
   onKeyDown?: (e: React.KeyboardEvent, row: number, col: number) => void;
 }
 
-export default function SudokuBoard({
+export default function ThaiAlphabetSudokuBoard({
   board,
   size,
   title = '',
@@ -39,6 +39,34 @@ export default function SudokuBoard({
     return value || '';
   };
 
+  // Handle keyboard input for Thai characters
+  const handleKeyDown = (e: React.KeyboardEvent, row: number, col: number) => {
+    if (!isInteractive || !onKeyDown) return;
+    
+    const validChars = getThaiCharactersForSize(size);
+    
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      // Handle Thai character input - pass the character directly
+      if (originalBoard && originalBoard[row][col] === null && validChars.includes(e.key)) {
+        // Create a synthetic event with the Thai character
+        const syntheticEvent = {
+          ...e,
+          key: e.key
+        } as React.KeyboardEvent;
+        onKeyDown(syntheticEvent, row, col);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Handle deletion for editable cells
+        if (originalBoard && originalBoard[row][col] === null) {
+          onKeyDown(e, row, col);
+        }
+      }
+      return;
+    }
+    
+    // Handle arrow key navigation
+    onKeyDown(e, row, col);
+  };
+
   const getCellClassName = (row: number, col: number) => {
     let baseSize;
     if (isPrint) {
@@ -48,14 +76,14 @@ export default function SudokuBoard({
       // Preview Print with further increased font sizes: 9x9 (+30px total), 6x6 (+20px total), 4x4 (+10px total)
       baseSize = size === 9 ? 'w-8 h-8 text-[44px]' : size === 6 ? 'w-10 h-10 text-[36px]' : 'w-12 h-12 text-[28px]';
     } else if (isInteractive) {
-      // Interactive game cells - match Thai Alphabet Sudoku sizes
+      // Interactive game cells
       baseSize = size === 9 ? 'w-12 h-12 text-lg' : size === 6 ? 'w-16 h-16 text-xl' : 'w-20 h-20 text-2xl';
     } else {
-      // Default size - match Thai Alphabet Sudoku sizes
+      // Default size
       baseSize = size === 9 ? 'w-10 h-10 text-base' : size === 6 ? 'w-12 h-12 text-lg' : 'w-16 h-16 text-xl';
     }
     
-    let className = `${baseSize} text-center font-bold flex items-center justify-center `;
+    let className = `${baseSize} flex items-center justify-center font-bold select-none `;
     
     // Add outline or border based on context
     if (isInteractive) {
@@ -78,95 +106,63 @@ export default function SudokuBoard({
     
     // Background and text colors
     if (isPreview || isPrint) {
-      // DIAGONAL SUDOKU: Highlight diagonal cells with blue background
-      if (isOnDiagonal(row, col, size)) {
-        className += 'bg-blue-200 text-black ';
-      } else {
-        className += 'bg-white text-black ';
-      }
+      className += 'bg-white text-black ';
     } else if (isInteractive && originalBoard) {
       // Interactive game styling
       if (originalBoard[row][col] !== null) {
-        // Original clues - blue background for diagonal cells, white for others
-        if (isOnDiagonal(row, col, size)) {
-          className += 'bg-blue-200 dark:bg-blue-800 text-gray-800 dark:text-gray-200 ';
-        } else {
-          className += 'bg-white dark:bg-white text-gray-800 dark:text-gray-800 ';
-        }
+        // Original clues - white background
+        className += 'bg-white dark:bg-white text-gray-800 dark:text-gray-800 ';
       } else {
         // User-entered cells
         if (errors?.has(`${row}-${col}`)) {
           // Error styling
           className += 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 ';
-        } else if (isOnDiagonal(row, col, size)) {
-          // Diagonal cells for user input - match Preview Print colors
-          className += 'bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 ';
         } else {
-          // Regular user input cells
+          // Regular user input cells - blue text
           className += 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 ';
         }
       }
     } else {
-      // Default styling with diagonal highlighting
-      if (isOnDiagonal(row, col, size)) {
-        className += 'bg-blue-200 dark:bg-blue-800 text-gray-800 dark:text-gray-200 ';
-      } else {
-        className += 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ';
-      }
+      // Default styling
+      className += 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ';
     }
     
     // Focused cell styling for interactive mode
     if (isInteractive && focusedCell && focusedCell[0] === row && focusedCell[1] === col) {
       className += 'ring-4 ring-blue-500 ring-opacity-50 ';
-      if (originalBoard && originalBoard[row][col] !== null) {
-        className += 'bg-blue-100 dark:bg-blue-800 ';
-      } else {
-        className += 'bg-blue-50 dark:bg-blue-900 ';
-      }
+      className += 'bg-blue-50 dark:bg-blue-900 ';
     }
     
     return className;
   };
 
   return (
-    <div className={`${isPreview ? 'mb-8' : 'mb-6'} mx-auto`}>
+    <div className="flex flex-col items-center space-y-4">
       {showTitle && title && (
-        <h3 className={`${isPreview ? 'text-xl mb-4' : 'text-2xl mb-4'} font-bold text-center ${isPreview || isPrint ? 'text-black' : 'text-gray-800 dark:text-white'}`}>
+        <h3 className="text-xl font-bold text-gray-800 dark:text-white">
           {title}
         </h3>
-        )}
-        <div 
-          className={`grid gap-0 mx-auto ${isInteractive ? 'border-2 border-gray-600' : 'outline outline-2 outline-gray-600'}`}
-          style={{
-            gridTemplateColumns: `repeat(${size}, 1fr)`,
-            width: 'fit-content'
-          }}
-        >
-          {board.map((row, rowIndex) =>
-            row.map((_, colIndex) => (
+      )}
+      
+      <div className="grid gap-0 border-2 border-gray-600 bg-gray-600">
+        {board.map((row, rowIndex) => (
+          <div key={rowIndex} className="flex">
+            {row.map((cell, colIndex) => (
               <div
                 key={`${rowIndex}-${colIndex}`}
-                onClick={isInteractive && onCellClick ? () => onCellClick(rowIndex, colIndex) : undefined}
-                onKeyDown={isInteractive && onKeyDown ? (e) => onKeyDown(e, rowIndex, colIndex) : undefined}
                 className={getCellClassName(rowIndex, colIndex)}
-                tabIndex={isInteractive ? 0 : undefined}
-                data-row={isInteractive ? rowIndex : undefined}
-                data-col={isInteractive ? colIndex : undefined}
+                onClick={() => isInteractive && onCellClick?.(rowIndex, colIndex)}
+                onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
+                tabIndex={isInteractive ? 0 : -1}
+                role={isInteractive ? "button" : undefined}
+                aria-label={isInteractive ? `Cell ${rowIndex + 1}, ${colIndex + 1}` : undefined}
               >
                 {getCellValue(rowIndex, colIndex)}
               </div>
-            ))
-          )}
-        </div>
-      
-      {/* Diagonal Sudoku Legend */}
-      {showTitle && !isPrint && (
-        <div className="mt-2 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Diagonal Sudoku: Numbers must not repeat in diagonals (highlighted cells)
-          </p>
-        </div>
-      )}
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

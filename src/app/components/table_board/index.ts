@@ -20,6 +20,14 @@ export { default as AlphabetSudokuBoard } from './alphabet_sudoku_board/SudokuBo
 export * as EvenOddSudoku from './even_odd_sudoku_board/SudokuGenerator';
 export { default as EvenOddSudokuBoard } from './even_odd_sudoku_board/SudokuBoard';
 
+// Export Thai Alphabet Sudoku
+export * as ThaiAlphabetSudoku from './thai_alphabet_sudoku_board/SudokuGenerator';
+export { default as ThaiAlphabetSudokuBoard } from './thai_alphabet_sudoku_board/SudokuBoard';
+
+// Export Consecutive Sudoku
+export * as ConsecutiveSudoku from './consecutive_sudoku_board/SudokuGenerator';
+export { default as ConsecutiveSudokuBoard } from './consecutive_sudoku_board/SudokuBoard';
+
 // Default exports for backward compatibility
 export type { SudokuBoard } from './classic_sudoku_board/SudokuGenerator';
 export { generatePuzzle, isValidMove, isBoardComplete } from './classic_sudoku_board/SudokuGenerator';

@@ -153,29 +153,94 @@ export function solveSudoku(board: SudokuBoard): boolean {
 
 // Generate a complete valid Even-Odd Sudoku board
 export function generateCompleteBoard(size: number): SudokuBoard {
-  const board = createEmptyBoard(size);
-  
-  // For Even-Odd Sudoku, we need to be more careful about initial placement
-  // Start with a strategic approach to ensure solvability
-  
   // Try multiple times to generate a valid board
-  for (let attempt = 0; attempt < 10; attempt++) {
-    // Reset board
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
-        board[row][col] = null;
-      }
-    }
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const board = createEmptyBoard(size);
     
-    // Try to fill the board using backtracking
-    if (solveSudoku(board)) {
+    // Use a more strategic approach: fill some cells first to guide the solution
+    if (fillBoardStrategically(board)) {
       return board;
     }
   }
   
-  // If we can't generate a valid board, return empty board
-  // This shouldn't happen with proper constraints
+  // Fallback: generate a classic sudoku and try to modify it to fit even-odd constraints
+  return generateFallbackBoard(size);
+}
+
+// Strategic board filling for Even-Odd Sudoku
+function fillBoardStrategically(board: SudokuBoard): boolean {
+  const size = board.length;
+  
+  // First, try to place some numbers strategically
+  const positions = [];
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      positions.push([row, col]);
+    }
+  }
+  
+  // Shuffle positions for randomness
+  for (let i = positions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [positions[i], positions[j]] = [positions[j], positions[i]];
+  }
+  
+  // Try to fill the board
+  return solveSudoku(board);
+}
+
+// Fallback board generation using classic approach
+function generateFallbackBoard(size: number): SudokuBoard {
+  const board = createEmptyBoard(size);
+  
+  // Fill diagonal boxes first (they don't interfere with each other)
+  fillDiagonalBoxes(board);
+  
+  // Fill remaining cells
+  solveSudoku(board);
+  
   return board;
+}
+
+// Fill diagonal 3x3 boxes for 9x9, or equivalent for other sizes
+function fillDiagonalBoxes(board: SudokuBoard): void {
+  const size = board.length;
+  const boxSize = Math.sqrt(size);
+  
+  for (let box = 0; box < size; box += boxSize) {
+    fillBox(board, box, box);
+  }
+}
+
+// Fill a single box with random valid numbers
+function fillBox(board: SudokuBoard, row: number, col: number): void {
+  const size = board.length;
+  const boxSize = Math.sqrt(size);
+  const numbers = Array.from({ length: size }, (_, i) => i + 1);
+  
+  // Shuffle numbers
+  for (let i = numbers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+  }
+  
+  let numIndex = 0;
+  for (let i = 0; i < boxSize; i++) {
+    for (let j = 0; j < boxSize; j++) {
+      const currentRow = row + i;
+      const currentCol = col + j;
+      
+      // Try to place a number that fits even-odd constraints
+      for (let attempt = 0; attempt < numbers.length; attempt++) {
+        const num = numbers[(numIndex + attempt) % numbers.length];
+        if (isValidMove(board, currentRow, currentCol, num)) {
+          board[currentRow][currentCol] = num;
+          numIndex++;
+          break;
+        }
+      }
+    }
+  }
 }
 
 // Generate a playable Even-Odd Sudoku puzzle by removing numbers from a complete board
@@ -192,13 +257,13 @@ export function generatePuzzle(size: number, difficulty: 'easy' | 'medium' | 'ha
   
   switch (difficulty) {
     case 'easy':
-      cellsToRemove = Math.floor(totalCells * 0.4); // Remove 40%
+      cellsToRemove = Math.floor(totalCells * 0.4);
       break;
     case 'medium':
-      cellsToRemove = Math.floor(totalCells * 0.5); // Remove 50%
+      cellsToRemove = Math.floor(totalCells * 0.5);
       break;
     case 'hard':
-      cellsToRemove = Math.floor(totalCells * 0.6); // Remove 60%
+      cellsToRemove = Math.floor(totalCells * 0.6);
       break;
   }
   
@@ -215,10 +280,77 @@ export function generatePuzzle(size: number, difficulty: 'easy' | 'medium' | 'ha
     [positions[i], positions[j]] = [positions[j], positions[i]];
   }
   
-  // Remove numbers
-  for (let i = 0; i < cellsToRemove && i < positions.length; i++) {
+  // Remove numbers, but ensure even initial numbers are only in shaded cells
+  // and that each box has at least some initial clues
+  const evenOddPattern = getEvenOddPattern(size);
+  const boxSize = Math.sqrt(size);
+  const numBoxes = size;
+  
+  // Track clues per box to ensure distribution
+  const cluesPerBox: number[] = new Array(numBoxes).fill(0);
+  const minCluesPerBox = Math.max(1, Math.floor(size / 3));
+  
+  // Count initial clues per box
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      const boxIndex = Math.floor(row / boxSize) * boxSize + Math.floor(col / boxSize);
+      cluesPerBox[boxIndex]++;
+    }
+  }
+  
+  let removedCount = 0;
+  
+  for (let i = 0; i < positions.length && removedCount < cellsToRemove; i++) {
     const [row, col] = positions[i];
-    puzzle[row][col] = null;
+    const cellValue = puzzle[row][col] as number;
+    const isShaded = evenOddPattern[row][col];
+    const isEven = cellValue % 2 === 0;
+    const boxIndex = Math.floor(row / boxSize) * boxSize + Math.floor(col / boxSize);
+    
+    // Don't remove if this would leave a box with too few clues
+    const wouldLeaveBoxEmpty = cluesPerBox[boxIndex] <= minCluesPerBox;
+    
+    // If it's an even number in an unshaded cell, always remove it (unless box constraint)
+    // If it's an odd number in a shaded cell, always remove it (unless box constraint)
+    // Otherwise, remove based on normal probability
+    if ((isEven && !isShaded) || (!isEven && isShaded)) {
+      if (!wouldLeaveBoxEmpty) {
+        puzzle[row][col] = null;
+        cluesPerBox[boxIndex]--;
+        removedCount++;
+      }
+    } else if (removedCount < cellsToRemove && !wouldLeaveBoxEmpty) {
+      puzzle[row][col] = null;
+      cluesPerBox[boxIndex]--;
+      removedCount++;
+    }
+  }
+  
+  // Second pass: ensure all boxes have at least one clue
+  for (let boxIndex = 0; boxIndex < numBoxes; boxIndex++) {
+    if (cluesPerBox[boxIndex] === 0) {
+      // Find a cell in this box that we can restore
+      const boxRow = Math.floor(boxIndex / boxSize) * boxSize;
+      const boxCol = (boxIndex % boxSize) * boxSize;
+      
+      for (let r = boxRow; r < boxRow + boxSize; r++) {
+        for (let c = boxCol; c < boxCol + boxSize; c++) {
+          if (puzzle[r][c] === null) {
+            const cellValue = solution[r][c] as number;
+            const isShaded = evenOddPattern[r][c];
+            const isEven = cellValue % 2 === 0;
+            
+            // Only restore if it follows even/odd rules
+            if ((isEven && isShaded) || (!isEven && !isShaded)) {
+              puzzle[r][c] = cellValue;
+              cluesPerBox[boxIndex]++;
+              break;
+            }
+          }
+        }
+        if (cluesPerBox[boxIndex] > 0) break;
+      }
+    }
   }
   
   return { puzzle, solution };

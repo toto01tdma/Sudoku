@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { SudokuBoard, SudokuType, getSudokuType, AnyBoard } from './table_board';
-import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard } from './table_board';
+import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard, ThaiAlphabetSudokuBoard, ConsecutiveSudokuBoard } from './table_board';
+import { ConsecutiveConstraints } from './table_board/consecutive_sudoku_board/SudokuGenerator';
 
 interface PrintBoardProps {
   size: 4 | 6 | 9;
@@ -13,6 +14,7 @@ interface PrintBoardProps {
 export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps) {
   const [boards, setBoards] = useState<SudokuBoard[]>([]);
   const [solutions, setSolutions] = useState<SudokuBoard[]>([]);
+  const [consecutiveConstraints, setConsecutiveConstraints] = useState<(ConsecutiveConstraints | null)[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [printSettings, setPrintSettings] = useState({
     includeSolution: true,
@@ -25,17 +27,26 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
       const sudokuConfig = getSudokuType(sudokuType);
       const newBoards: SudokuBoard[] = [];
       const newSolutions: SudokuBoard[] = [];
-      
+      const newConstraints: (ConsecutiveConstraints | null)[] = [];
+
       for (let i = 0; i < printSettings.gridCount; i++) {
-        const { puzzle, solution } = sudokuConfig.generator.generatePuzzle(size, 'medium');
-        newBoards.push(puzzle as AnyBoard);
-        newSolutions.push(solution as AnyBoard);
+        const result = sudokuConfig.generator.generatePuzzle(size, 'medium');
+        newBoards.push(result.puzzle as AnyBoard);
+        newSolutions.push(result.solution as AnyBoard);
+
+        // Handle consecutive constraints if present
+        if (sudokuType === 'consecutive' && 'constraints' in result && result.constraints) {
+          newConstraints.push(result.constraints as ConsecutiveConstraints);
+        } else {
+          newConstraints.push(null);
+        }
       }
-      
+
       setBoards(newBoards);
       setSolutions(newSolutions);
+      setConsecutiveConstraints(newConstraints);
     };
-    
+
     generateMultiplePuzzles();
     setShowPreview(false);
   }, [size, sudokuType, printSettings.gridCount]);
@@ -51,40 +62,45 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
 
   if (showPreview) {
     return (
-      <div className="min-h-screen bg-white text-black p-8">
-        <div className="mx-auto">          
+      <div className="min-h-screen bg-white text-black p-4">
+        <div className="mx-auto">
           <div className="print:block">
-            {/* Render multiple puzzle grids in 2-per-row layout */}
+            {/* Render multiple puzzle grids in 2-per-page layout along X-axis */}
             <div className="grid-container">
-              {Array.from({ length: Math.ceil(printSettings.gridCount / 2) }, (_, rowIndex) => (
-                <div key={`row-${rowIndex}`} className={`grid-row ${rowIndex > 0 ? 'page-break-before' : ''}`}>
-                  <div className="flex justify-between gap-4 mb-8">
-                    {Array.from({ length: 2 }, (_, colIndex) => {
-                      const gridIndex = rowIndex * 2 + colIndex;
+              {Array.from({ length: Math.ceil(printSettings.gridCount / 2) }, (_, pageIndex) => (
+                <div key={`page-${pageIndex}`} className={`${pageIndex > 0 ? 'page-break-before' : ''}`}>
+                  <p className="text-start text-2xl font-bold">{sudokuType} sudoku</p>
+                  <div className="flex flex-col items-center space-y-8">
+                    {Array.from({ length: 2 }, (_, gridInPageIndex) => {
+                      const gridIndex = pageIndex * 2 + gridInPageIndex;
                       if (gridIndex >= printSettings.gridCount) return null;
                       
                       return (
-                        <div key={`puzzle-${gridIndex}`} className="grid-item flex-1">
-                               {(() => {
-                                 const boardProps = {
-                                   board: (boards[gridIndex] || []) as AnyBoard,
-                                   size,
-                                   isPreview: true,
-                                   isPrint: true,
-                                   showTitle: false
-                                 };
+                        <div key={`puzzle-${gridIndex}`} className="grid-item w-full max-w-md">
+                          {(() => {
+                            const boardProps = {
+                              board: (boards[gridIndex] || []) as AnyBoard,
+                              size,
+                              isPreview: true,
+                              isPrint: true,
+                              showTitle: false
+                            };
 
-                                 switch (sudokuType) {
-                                   case 'diagonal':
-                                     return <DiagonalSudokuBoard {...boardProps} />;
-                                   case 'alphabet':
-                                     return <AlphabetSudokuBoard {...boardProps} />;
-                                   case 'even-odd':
-                                     return <EvenOddSudokuBoard {...boardProps} />;
-                                   default:
-                                     return <ClassicSudokuBoard {...boardProps} />;
-                                 }
-                               })()}
+                            switch (sudokuType) {
+                              case 'diagonal':
+                                return <DiagonalSudokuBoard {...boardProps} />;
+                              case 'alphabet':
+                                return <AlphabetSudokuBoard {...boardProps} />;
+                              case 'even-odd':
+                                return <EvenOddSudokuBoard {...boardProps} />;
+                              case 'thai-alphabet':
+                                return <ThaiAlphabetSudokuBoard {...boardProps} />;
+                              case 'consecutive':
+                                return <ConsecutiveSudokuBoard {...boardProps} constraints={consecutiveConstraints[gridIndex] || { horizontal: [], vertical: [] }} />;
+                              default:
+                                return <ClassicSudokuBoard {...boardProps} />;
+                            }
+                          })()}
                         </div>
                       );
                     })}
@@ -92,40 +108,44 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
                 </div>
               ))}
             </div>
-            
+
             {printSettings.includeSolution && solutions.length > 0 && (
               <div className="page-break-before">
                 <div className="grid-container">
-                  {Array.from({ length: Math.ceil(solutions.length / 2) }, (_, rowIndex) => (
-                    <div key={`solution-row-${rowIndex}`} className={`grid-row ${rowIndex > 0 ? 'page-break-before' : ''}`}>
-                      <div className="flex justify-between gap-4 mb-8">
-                        {Array.from({ length: 2 }, (_, colIndex) => {
-                          const solutionIndex = rowIndex * 2 + colIndex;
+                  {Array.from({ length: Math.ceil(solutions.length / 2) }, (_, pageIndex) => (
+                    <div key={`solution-page-${pageIndex}`} className={`${pageIndex > 0 ? 'page-break-before' : ''}`}>
+                      <div className="flex flex-col items-center space-y-8">
+                        {Array.from({ length: 2 }, (_, solutionInPageIndex) => {
+                          const solutionIndex = pageIndex * 2 + solutionInPageIndex;
                           if (solutionIndex >= solutions.length) return null;
                           
                           return (
-                            <div key={`solution-${solutionIndex}`} className="grid-item flex-1">
-                                   {(() => {
-                                     const boardProps = {
-                                       board: solutions[solutionIndex] as AnyBoard,
-                                       size,
-                                       title: `Solution ${solutionIndex + 1}`,
-                                       isPreview: true,
-                                       isPrint: true,
-                                       showTitle: true
-                                     };
+                            <div key={`solution-${solutionIndex}`} className="grid-item w-full max-w-md">
+                              {(() => {
+                                const boardProps = {
+                                  board: solutions[solutionIndex] as AnyBoard,
+                                  size,
+                                  title: `Solution ${solutionIndex + 1}`,
+                                  isPreview: true,
+                                  isPrint: true,
+                                  showTitle: true
+                                };
 
-                                     switch (sudokuType) {
-                                       case 'diagonal':
-                                         return <DiagonalSudokuBoard {...boardProps} />;
-                                       case 'alphabet':
-                                         return <AlphabetSudokuBoard {...boardProps} />;
-                                       case 'even-odd':
-                                         return <EvenOddSudokuBoard {...boardProps} />;
-                                       default:
-                                         return <ClassicSudokuBoard {...boardProps} />;
-                                     }
-                                   })()}
+                                switch (sudokuType) {
+                                  case 'diagonal':
+                                    return <DiagonalSudokuBoard {...boardProps} />;
+                                  case 'alphabet':
+                                    return <AlphabetSudokuBoard {...boardProps} />;
+                                  case 'even-odd':
+                                    return <EvenOddSudokuBoard {...boardProps} />;
+                                  case 'thai-alphabet':
+                                    return <ThaiAlphabetSudokuBoard {...boardProps} />;
+                                  case 'consecutive':
+                                    return <ConsecutiveSudokuBoard {...boardProps} constraints={consecutiveConstraints[solutionIndex] || { horizontal: [], vertical: [] }} />;
+                                  default:
+                                    return <ClassicSudokuBoard {...boardProps} />;
+                                }
+                              })()}
                             </div>
                           );
                         })}
@@ -200,24 +220,25 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
             }
             
             .grid-item {
-              flex: 1;
-              max-width: calc(50% - 2mm);
+              width: 100%;
+              max-width: 120mm;
+              margin: 0 auto;
             }
             
-            /* Responsive grid cell sizes for A4 2-per-row layout */
+            /* Responsive grid cell sizes for A4 1-per-row layout */
             .grid-item .grid > div {
               ${size === 9 ? `
-                width: 4.5mm !important;
-                height: 4.5mm !important;
-                font-size: 10px !important;
-              ` : size === 6 ? `
-                width: 6mm !important;
-                height: 6mm !important;
-                font-size: 12px !important;
-              ` : `
                 width: 8mm !important;
                 height: 8mm !important;
                 font-size: 14px !important;
+              ` : size === 6 ? `
+                width: 12mm !important;
+                height: 12mm !important;
+                font-size: 16px !important;
+              ` : `
+                width: 18mm !important;
+                height: 18mm !important;
+                font-size: 20px !important;
               `}
               line-height: 1 !important;
             }
@@ -262,25 +283,29 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
         <div className="flex flex-col items-center gap-8">
           {/* Board Preview */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl">
-                 {(() => {
-                   const boardProps = {
-                     board: (boards[0] || []) as AnyBoard,
-                     size,
-                     title: `${getSudokuType(sudokuType).name} Preview`,
-                     showTitle: true
-                   };
+            {(() => {
+              const boardProps = {
+                board: (boards[0] || []) as AnyBoard,
+                size,
+                title: `${getSudokuType(sudokuType).name} Preview`,
+                showTitle: true
+              };
 
-                   switch (sudokuType) {
-                     case 'diagonal':
-                       return <DiagonalSudokuBoard {...boardProps} />;
-                     case 'alphabet':
-                       return <AlphabetSudokuBoard {...boardProps} />;
-                     case 'even-odd':
-                       return <EvenOddSudokuBoard {...boardProps} />;
-                     default:
-                       return <ClassicSudokuBoard {...boardProps} />;
-                   }
-                 })()}
+              switch (sudokuType) {
+                case 'diagonal':
+                  return <DiagonalSudokuBoard {...boardProps} />;
+                case 'alphabet':
+                  return <AlphabetSudokuBoard {...boardProps} />;
+                case 'even-odd':
+                  return <EvenOddSudokuBoard {...boardProps} />;
+                case 'thai-alphabet':
+                  return <ThaiAlphabetSudokuBoard {...boardProps} />;
+                case 'consecutive':
+                  return <ConsecutiveSudokuBoard {...boardProps} constraints={consecutiveConstraints[0] || { horizontal: [], vertical: [] }} />;
+                default:
+                  return <ClassicSudokuBoard {...boardProps} />;
+              }
+            })()}
           </div>
 
           {/* Print Settings */}
@@ -288,7 +313,7 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
             <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4 text-center">
               Print Settings
             </h3>
-            
+
             <div className="space-y-4">
               <label className="flex items-center space-x-3 cursor-pointer">
                 <input
@@ -301,13 +326,13 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
                   className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
                 <span className="text-gray-700 dark:text-gray-300 font-medium">
-                  Include solution grid
+                  ปริ้นเฉลยด้วย
                 </span>
               </label>
-              
+
               <div className="flex items-center space-x-3">
                 <label className="text-gray-700 dark:text-gray-300 font-medium">
-                  Number of grids:
+                  เลือกจำนวนตาราง :
                 </label>
                 <input
                   type="number"

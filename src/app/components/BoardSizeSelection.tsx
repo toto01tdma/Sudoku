@@ -10,7 +10,7 @@ interface BoardSizeSelectionProps {
   mode: 'play' | 'print';
 }
 
-export default function BoardSizeSelection({ onSizeSelect, onBack, mode }: BoardSizeSelectionProps) {
+export default function BoardSizeSelection({ onSizeSelect, onBack }: BoardSizeSelectionProps) {
   const [selectedType, setSelectedType] = useState<SudokuType>('classic');
   const [showSizeSelection, setShowSizeSelection] = useState(false);
   

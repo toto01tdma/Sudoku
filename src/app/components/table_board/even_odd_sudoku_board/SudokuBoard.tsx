@@ -69,16 +69,15 @@ export default function SudokuBoard({
   const getCellClassName = (row: number, col: number) => {
     let baseSize;
     if (isPrint) {
-      // Smaller cells for 2-per-row layout on A4 paper
-      baseSize = size === 9 ? 'w-[32px] h-[32px] text-sm' : size === 6 ? 'w-[44px] h-[44px] text-base' : 'w-[60px] h-[60px] text-lg';
+      // Match Classic Sudoku IsPrint sizes and fonts for 2-per-row layout on A4 paper
+      baseSize = size === 9 ? 'w-[48px] h-[48px] text-[25px]' : size === 6 ? 'w-[70px] h-[70px] text-[35px]' : 'w-[100px] h-[100px] text-[45px]';
     } else if (isPreview) {
-      // Adjusted for preview with 2-per-row layout
-      baseSize = size === 9 ? 'w-8 h-8 text-sm' : size === 6 ? 'w-10 h-10 text-base' : 'w-12 h-12 text-lg';
+      // Preview Print with further increased font sizes: 9x9 (+30px total), 6x6 (+20px total), 4x4 (+10px total)
+      baseSize = size === 9 ? 'w-8 h-8 text-[44px]' : size === 6 ? 'w-10 h-10 text-[36px]' : 'w-12 h-12 text-[28px]';
     } else if (isInteractive) {
-      // Interactive game cells
-      baseSize = 'w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-sm sm:text-base';
+      baseSize = size === 9 ? 'w-12 h-12 text-lg' : size === 6 ? 'w-16 h-16 text-xl' : 'w-20 h-20 text-2xl';
     } else {
-      baseSize = 'w-10 h-10 md:w-12 md:h-12 text-base'; // Normal for editing
+      baseSize = size === 9 ? 'w-10 h-10 text-base' : size === 6 ? 'w-12 h-12 text-lg' : 'w-16 h-16 text-xl';
     }
     
     let className = `${baseSize} text-center font-bold flex items-center justify-center `;
@@ -115,9 +114,13 @@ export default function SudokuBoard({
     } else if (isInteractive && originalBoard) {
       // Interactive game styling
       if (originalBoard[row][col] !== null) {
-        // Original clues - white background for both shaded and unshaded
-        if (isShaded) {
-          className += 'bg-white dark:bg-white text-gray-800 dark:text-gray-800 ';
+        // Original clues - even numbers get shaded cell background, odd numbers get white
+        const cellValue = originalBoard[row][col] as number;
+        const isEvenNumber = cellValue % 2 === 0;
+        
+        if (isEvenNumber) {
+          // Even initial numbers use the same background as shaded cells
+          className += 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 ';
         } else {
           className += 'bg-white dark:bg-white text-gray-800 dark:text-gray-800 ';
         }
@@ -140,11 +143,23 @@ export default function SudokuBoard({
         }
       }
     } else {
-      // Default styling with shaded pattern
-      if (isShaded) {
-        className += 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 ';
+      // Default styling - check if cell has a value to apply even/odd coloring
+      const cellValue = board[row][col];
+      if (cellValue !== null) {
+        const isEvenNumber = (cellValue as number) % 2 === 0;
+        if (isEvenNumber) {
+          // Even numbers use the same background as shaded cells
+          className += 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 ';
+        } else {
+          className += 'bg-white dark:bg-white text-gray-800 dark:text-gray-800 ';
+        }
       } else {
-        className += 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ';
+        // Empty cells with shaded pattern
+        if (isShaded) {
+          className += 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 ';
+        } else {
+          className += 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ';
+        }
       }
     }
     

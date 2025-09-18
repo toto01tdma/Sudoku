@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { SudokuBoard, SudokuType, getSudokuType, AnyBoard } from './table_board';
-import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard } from './table_board';
+import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard, ThaiAlphabetSudokuBoard, ConsecutiveSudokuBoard } from './table_board';
+import { ConsecutiveConstraints } from './table_board/consecutive_sudoku_board/SudokuGenerator';
 
 interface SudokuGameProps {
   size: 4 | 6 | 9;
@@ -18,13 +19,22 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
   const [focusedCell, setFocusedCell] = useState<[number, number] | null>(null);
   const [errors, setErrors] = useState<Set<string>>(new Set());
   const [isComplete, setIsComplete] = useState(false);
+  const [consecutiveConstraints, setConsecutiveConstraints] = useState<ConsecutiveConstraints | null>(null);
 
   // Generate new puzzle when component mounts or size/type changes
   useEffect(() => {
     const sudokuConfig = getSudokuType(sudokuType);
-    const { puzzle } = sudokuConfig.generator.generatePuzzle(size, 'medium');
-    setBoard(puzzle as AnyBoard);
-    setOriginalBoard(puzzle.map(row => [...row]) as AnyBoard);
+    const result = sudokuConfig.generator.generatePuzzle(size, 'medium');
+    setBoard(result.puzzle as AnyBoard);
+    setOriginalBoard(result.puzzle.map(row => [...row]) as AnyBoard);
+    
+    // Handle consecutive constraints if present
+    if (sudokuType === 'consecutive' && 'constraints' in result && result.constraints) {
+      setConsecutiveConstraints(result.constraints as ConsecutiveConstraints);
+    } else {
+      setConsecutiveConstraints(null);
+    }
+    
     setFocusedCell(null);
     setErrors(new Set());
     setIsComplete(false);
@@ -51,15 +61,21 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
   // Handle keyboard navigation - works for all cells now
   const handleKeyDown = (e: React.KeyboardEvent, row: number, col: number) => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-      // If it's a number key and this is an editable cell, handle input
-      if (originalBoard[row][col] === null && /^[1-9]$/.test(e.key)) {
-        const numValue = parseInt(e.key, 10);
-        if (numValue >= 1 && numValue <= size) {
+      if (originalBoard[row][col] === null) {
+        if (sudokuType === 'alphabet' && /^[A-Za-z]$/.test(e.key)) {
+          // Handle alphabet input
+          handleCellChange(row, col, e.key.toUpperCase());
+        } else if (sudokuType === 'thai-alphabet' && /^[ก-๙]$/.test(e.key)) {
+          // Handle Thai character input
           handleCellChange(row, col, e.key);
-        }
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        // Handle deletion for editable cells
-        if (originalBoard[row][col] === null) {
+        } else if ((sudokuType === 'classic' || sudokuType === 'diagonal' || sudokuType === 'even-odd' || sudokuType === 'consecutive') && /^[1-9]$/.test(e.key)) {
+          // Handle number input for numeric Sudoku types
+          const numValue = parseInt(e.key, 10);
+          if (numValue >= 1 && numValue <= size) {
+            handleCellChange(row, col, e.key);
+          }
+        } else if (e.key === 'Delete' || e.key === 'Backspace') {
+          // Handle deletion for editable cells
           handleCellChange(row, col, '');
         }
       }
@@ -108,6 +124,19 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
         }
       } else {
         return; // Invalid input
+      }
+    } else if (sudokuType === 'thai-alphabet') {
+      // Handle Thai character input
+      if (value === '') {
+        newBoard[row][col] = null;
+      } else {
+        // For Thai alphabet, we'll use the first N Thai consonants based on size
+        const thaiChars = ['ก', 'ข', 'ค', 'ง', 'จ', 'ช', 'ด', 'ต', 'น'];
+        if (thaiChars.slice(0, size).includes(value)) {
+          newBoard[row][col] = value;
+        } else {
+          return; // Invalid Thai character for this board size
+        }
       }
     } else {
       // Handle number input for other Sudoku types
@@ -226,6 +255,10 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
                   return <AlphabetSudokuBoard {...boardProps} />;
                 case 'even-odd':
                   return <EvenOddSudokuBoard {...boardProps} />;
+                case 'thai-alphabet':
+                  return <ThaiAlphabetSudokuBoard {...boardProps} />;
+                case 'consecutive':
+                  return <ConsecutiveSudokuBoard {...boardProps} constraints={consecutiveConstraints || { horizontal: [], vertical: [] }} />;
                 default:
                   return <ClassicSudokuBoard {...boardProps} />;
               }

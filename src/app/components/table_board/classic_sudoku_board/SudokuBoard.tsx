@@ -94,14 +94,9 @@ export default function SudokuBoard({
       className += 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ';
     }
     
-    // Focused cell styling for interactive mode
+    // Focused cell styling for interactive mode - match Windoku style
     if (isInteractive && focusedCell && focusedCell[0] === row && focusedCell[1] === col) {
-      className += 'ring-4 ring-blue-500 ring-opacity-50 ';
-      if (originalBoard && originalBoard[row][col] !== null) {
-        className += 'bg-blue-100 dark:bg-blue-800 ';
-      } else {
-        className += 'bg-blue-50 dark:bg-blue-900 ';
-      }
+      className += 'ring-2 ring-blue-500 ring-inset ';
     }
     
     return className;

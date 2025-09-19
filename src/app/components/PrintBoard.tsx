@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { SudokuBoard, SudokuType, getSudokuType, AnyBoard } from './table_board';
-import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard, ThaiAlphabetSudokuBoard, ConsecutiveSudokuBoard } from './table_board';
+import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard, ThaiAlphabetSudokuBoard, ConsecutiveSudokuBoard, AsteriskSudokuBoard, JigsawSudokuBoard, WindokuSudokuBoard } from './table_board';
 import { ConsecutiveConstraints } from './table_board/consecutive_sudoku_board/SudokuGenerator';
+import { JigsawRegions } from './table_board/jigsaw_sudoku_board/SudokuGenerator';
 
 interface PrintBoardProps {
   size: 4 | 6 | 9;
@@ -15,6 +16,8 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
   const [boards, setBoards] = useState<SudokuBoard[]>([]);
   const [solutions, setSolutions] = useState<SudokuBoard[]>([]);
   const [consecutiveConstraints, setConsecutiveConstraints] = useState<(ConsecutiveConstraints | null)[]>([]);
+  const [evenOddPatterns, setEvenOddPatterns] = useState<(boolean[][] | null)[]>([]);
+  const [jigsawRegionsArray, setJigsawRegionsArray] = useState<(JigsawRegions | null)[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [printSettings, setPrintSettings] = useState({
     includeSolution: true,
@@ -28,6 +31,8 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
       const newBoards: SudokuBoard[] = [];
       const newSolutions: SudokuBoard[] = [];
       const newConstraints: (ConsecutiveConstraints | null)[] = [];
+      const newEvenOddPatterns: (boolean[][] | null)[] = [];
+      const newJigsawRegions: (JigsawRegions | null)[] = [];
 
       for (let i = 0; i < printSettings.gridCount; i++) {
         const result = sudokuConfig.generator.generatePuzzle(size, 'medium');
@@ -40,11 +45,27 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
         } else {
           newConstraints.push(null);
         }
+
+        // Handle even-odd patterns if present
+        if (sudokuType === 'even-odd' && 'evenOddPattern' in result && result.evenOddPattern) {
+          newEvenOddPatterns.push(result.evenOddPattern as boolean[][]);
+        } else {
+          newEvenOddPatterns.push(null);
+        }
+
+        // Handle jigsaw regions if present
+        if (sudokuType === 'jigsaw' && 'jigsawRegions' in result && result.jigsawRegions) {
+          newJigsawRegions.push(result.jigsawRegions as JigsawRegions);
+        } else {
+          newJigsawRegions.push(null);
+        }
       }
 
       setBoards(newBoards);
       setSolutions(newSolutions);
       setConsecutiveConstraints(newConstraints);
+      setEvenOddPatterns(newEvenOddPatterns);
+      setJigsawRegionsArray(newJigsawRegions);
     };
 
     generateMultiplePuzzles();
@@ -92,11 +113,17 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
                               case 'alphabet':
                                 return <AlphabetSudokuBoard {...boardProps} />;
                               case 'even-odd':
-                                return <EvenOddSudokuBoard {...boardProps} />;
+                                return <EvenOddSudokuBoard {...boardProps} evenOddPattern={evenOddPatterns[gridIndex] || undefined} />;
                               case 'thai-alphabet':
                                 return <ThaiAlphabetSudokuBoard {...boardProps} />;
                               case 'consecutive':
                                 return <ConsecutiveSudokuBoard {...boardProps} constraints={consecutiveConstraints[gridIndex] || { horizontal: [], vertical: [] }} />;
+                              case 'asterisk':
+                                return <AsteriskSudokuBoard {...boardProps} />;
+                              case 'jigsaw':
+                                return <JigsawSudokuBoard {...boardProps} jigsawRegions={jigsawRegionsArray[gridIndex] || undefined} />;
+                              case 'windoku':
+                                return <WindokuSudokuBoard {...boardProps} />;
                               default:
                                 return <ClassicSudokuBoard {...boardProps} />;
                             }
@@ -137,11 +164,17 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
                                   case 'alphabet':
                                     return <AlphabetSudokuBoard {...boardProps} />;
                                   case 'even-odd':
-                                    return <EvenOddSudokuBoard {...boardProps} />;
+                                    return <EvenOddSudokuBoard {...boardProps} evenOddPattern={evenOddPatterns[solutionIndex] || undefined} />;
                                   case 'thai-alphabet':
                                     return <ThaiAlphabetSudokuBoard {...boardProps} />;
                                   case 'consecutive':
                                     return <ConsecutiveSudokuBoard {...boardProps} constraints={consecutiveConstraints[solutionIndex] || { horizontal: [], vertical: [] }} />;
+                                  case 'asterisk':
+                                    return <AsteriskSudokuBoard {...boardProps} />;
+                                  case 'jigsaw':
+                                    return <JigsawSudokuBoard {...boardProps} jigsawRegions={jigsawRegionsArray[solutionIndex] || undefined} />;
+                                  case 'windoku':
+                                    return <WindokuSudokuBoard {...boardProps} />;
                                   default:
                                     return <ClassicSudokuBoard {...boardProps} />;
                                 }
@@ -297,11 +330,17 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
                 case 'alphabet':
                   return <AlphabetSudokuBoard {...boardProps} />;
                 case 'even-odd':
-                  return <EvenOddSudokuBoard {...boardProps} />;
+                  return <EvenOddSudokuBoard {...boardProps} evenOddPattern={evenOddPatterns[0] || undefined} />;
                 case 'thai-alphabet':
                   return <ThaiAlphabetSudokuBoard {...boardProps} />;
                 case 'consecutive':
                   return <ConsecutiveSudokuBoard {...boardProps} constraints={consecutiveConstraints[0] || { horizontal: [], vertical: [] }} />;
+                case 'asterisk':
+                  return <AsteriskSudokuBoard {...boardProps} />;
+                case 'jigsaw':
+                  return <JigsawSudokuBoard {...boardProps} jigsawRegions={jigsawRegionsArray[0] || undefined} />;
+                case 'windoku':
+                  return <WindokuSudokuBoard {...boardProps} />;
                 default:
                   return <ClassicSudokuBoard {...boardProps} />;
               }
@@ -313,7 +352,7 @@ export default function PrintBoard({ size, sudokuType, onBack }: PrintBoardProps
             <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4 text-center">
               Print Settings
             </h3>
-
+            
             <div className="space-y-4">
               <label className="flex items-center space-x-3 cursor-pointer">
                 <input

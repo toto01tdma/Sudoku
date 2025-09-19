@@ -28,6 +28,18 @@ export { default as ThaiAlphabetSudokuBoard } from './thai_alphabet_sudoku_board
 export * as ConsecutiveSudoku from './consecutive_sudoku_board/SudokuGenerator';
 export { default as ConsecutiveSudokuBoard } from './consecutive_sudoku_board/SudokuBoard';
 
+// Export Asterisk Sudoku
+export * as AsteriskSudoku from './asterisk_sudoku_board/SudokuGenerator';
+export { default as AsteriskSudokuBoard } from './asterisk_sudoku_board/SudokuBoard';
+
+// Export Jigsaw Sudoku
+export * as JigsawSudoku from './jigsaw_sudoku_board/SudokuGenerator';
+export { default as JigsawSudokuBoard } from './jigsaw_sudoku_board/SudokuBoard';
+
+// Export Windoku Sudoku
+export * as WindokuSudoku from './windoku_sudoku_board/SudokuGenerator';
+export { default as WindokuSudokuBoard } from './windoku_sudoku_board/SudokuBoard';
+
 // Default exports for backward compatibility
 export type { SudokuBoard } from './classic_sudoku_board/SudokuGenerator';
 export { generatePuzzle, isValidMove, isBoardComplete } from './classic_sudoku_board/SudokuGenerator';

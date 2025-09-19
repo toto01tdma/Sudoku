@@ -47,6 +47,14 @@ export default function ConsecutiveSudokuBoard({
     onKeyDown(e, row, col);
   };
 
+  // Get inline styles for print/preview mode
+  const getCellInlineStyle = (row: number, col: number) => {
+    if (isPreview || isPrint) {
+      return { backgroundColor: '#ffffff', color: '#000000' }; // bg-white equivalent for print
+    }
+    return {};
+  };
+
   const getCellClassName = (row: number, col: number) => {
     let baseSize;
     if (isPrint) {
@@ -103,14 +111,15 @@ export default function ConsecutiveSudokuBoard({
         }
       }
     } else {
-      // Default styling
-      className += 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ';
+      // Default styling - background colors handled by inline styles for print/preview
+      if (!(isPreview || isPrint)) {
+        className += 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ';
+      }
     }
     
-    // Focused cell styling for interactive mode
+    // Focused cell styling for interactive mode - match Windoku style
     if (isInteractive && focusedCell && focusedCell[0] === row && focusedCell[1] === col) {
-      className += 'ring-4 ring-blue-500 ring-opacity-50 ';
-      className += 'bg-blue-50 dark:bg-blue-900 ';
+      className += 'ring-2 ring-blue-500 ring-inset ';
     }
     
     return className;
@@ -167,6 +176,7 @@ export default function ConsecutiveSudokuBoard({
                 <div
                   key={`${rowIndex}-${colIndex}`}
                   className={getCellClassName(rowIndex, colIndex)}
+                  style={getCellInlineStyle(rowIndex, colIndex)}
                   onClick={() => isInteractive && onCellClick?.(rowIndex, colIndex)}
                   onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
                   tabIndex={isInteractive ? 0 : -1}

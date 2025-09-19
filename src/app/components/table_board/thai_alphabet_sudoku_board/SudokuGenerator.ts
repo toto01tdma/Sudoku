@@ -9,8 +9,16 @@ export function createEmptyBoard(size: number): SudokuBoard {
 
 // Get the Thai characters to use based on board size
 export function getThaiCharactersForSize(size: number): string[] {
-  // Thai consonants - using the most common and recognizable ones
-  const thaiChars = ['ก', 'ข', 'ค', 'ง', 'จ', 'ช', 'ด', 'ต', 'น'];
+  if (size === 4) {
+    return ['ก', 'ข', 'ค', 'ง'];
+  } else if (size === 6) {
+    return ['ก', 'ข', 'ค', 'ง', 'จ', 'ฉ'];
+  } else if (size === 9) {
+    return ['ก', 'ข', 'ค', 'ง', 'จ', 'ฉ', 'ช', 'ซ', 'ฌ'];
+  }
+  
+  // Fallback for other sizes (shouldn't happen)
+  const thaiChars = ['ก', 'ข', 'ค', 'ง', 'จ', 'ฉ', 'ช', 'ซ', 'ฌ'];
   return thaiChars.slice(0, size);
 }
 

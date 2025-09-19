@@ -1,4 +1,5 @@
 import { SudokuCell, SudokuBoard } from '../types';
+import * as ClassicSudoku from '../classic_sudoku_board/SudokuGenerator';
 
 export type { SudokuCell, SudokuBoard };
 
@@ -13,46 +14,43 @@ export function createEmptyBoard(size: number): SudokuBoard {
   return Array(size).fill(null).map(() => Array(size).fill(null));
 }
 
-// Helper function to get the box/subgrid coordinates
-export function getBoxCoordinates(row: number, col: number, size: number): [number, number] {
-  let boxSize: number;
-  if (size === 4) boxSize = 2;
-  else if (size === 6) boxSize = 2; // 6x6 uses 2x3 boxes
-  else boxSize = 3; // 9x9 uses 3x3 boxes
-  
-  if (size === 6) {
-    // For 6x6, we have 2x3 boxes
-    const boxRow = Math.floor(row / 2);
-    const boxCol = Math.floor(col / 3);
-    return [boxRow, boxCol];
-  } else {
-    const boxRow = Math.floor(row / boxSize);
-    const boxCol = Math.floor(col / boxSize);
-    return [boxRow, boxCol];
-  }
-}
-
-// Generate random consecutive constraints for the board
-export function generateConsecutiveConstraints(size: number): ConsecutiveConstraints {
+// Generate consecutive constraints based on the solution board
+export function generateConsecutiveConstraints(solution: SudokuBoard): ConsecutiveConstraints {
+  const size = solution.length;
   const horizontal: boolean[][] = Array(size).fill(null).map(() => Array(size - 1).fill(false));
   const vertical: boolean[][] = Array(size - 1).fill(null).map(() => Array(size).fill(false));
   
-  // Add some random consecutive constraints (about 20-30% of possible positions)
-  const constraintProbability = 0.25;
+  // Probability of adding a consecutive mark where numbers are actually consecutive
+  const markProbability = 0.6; // 60% chance to mark actual consecutive pairs
   
-  // Horizontal constraints
+  // Also add some random marks where numbers are consecutive
+  const randomMarkProbability = 0.2; // 20% chance to add random consecutive marks
+  
+  // Check horizontal pairs
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size - 1; col++) {
-      if (Math.random() < constraintProbability) {
+      const leftValue = solution[row][col] as number;
+      const rightValue = solution[row][col + 1] as number;
+      const isConsecutive = Math.abs(leftValue - rightValue) === 1;
+      
+      if (isConsecutive && Math.random() < markProbability) {
         horizontal[row][col] = true;
+      } else if (!isConsecutive && Math.random() < randomMarkProbability) {
+        // Occasionally add marks between non-consecutive numbers for puzzle variety
+        // But we need to ensure this doesn't make the puzzle unsolvable
+        // For now, let's only mark actual consecutive pairs
       }
     }
   }
   
-  // Vertical constraints
+  // Check vertical pairs
   for (let row = 0; row < size - 1; row++) {
     for (let col = 0; col < size; col++) {
-      if (Math.random() < constraintProbability) {
+      const topValue = solution[row][col] as number;
+      const bottomValue = solution[row + 1][col] as number;
+      const isConsecutive = Math.abs(topValue - bottomValue) === 1;
+      
+      if (isConsecutive && Math.random() < markProbability) {
         vertical[row][col] = true;
       }
     }
@@ -67,56 +65,19 @@ export function isValidMove(
   row: number, 
   col: number, 
   num: number, 
-  constraints: ConsecutiveConstraints
+  constraints?: ConsecutiveConstraints
 ): boolean {
-  const size = board.length;
-  
-  // Check if number is in valid range
-  if (num < 1 || num > size) {
+  // First check basic Sudoku rules
+  if (!ClassicSudoku.isValidMove(board, row, col, num)) {
     return false;
   }
   
-  // Check row
-  for (let c = 0; c < size; c++) {
-    if (c !== col && board[row][c] === num) {
-      return false;
-    }
+  // If no constraints provided, just use classic validation
+  if (!constraints) {
+    return true;
   }
   
-  // Check column
-  for (let r = 0; r < size; r++) {
-    if (r !== row && board[r][col] === num) {
-      return false;
-    }
-  }
-  
-  // Check box/subgrid
-  const [boxRow, boxCol] = getBoxCoordinates(row, col, size);
-  
-  if (size === 6) {
-    // 6x6 grid has 2x3 boxes
-    const startRow = boxRow * 2;
-    const startCol = boxCol * 3;
-    for (let r = startRow; r < startRow + 2; r++) {
-      for (let c = startCol; c < startCol + 3; c++) {
-        if ((r !== row || c !== col) && board[r][c] === num) {
-          return false;
-        }
-      }
-    }
-  } else {
-    // 4x4 and 9x9 grids
-    const boxSize = size === 4 ? 2 : 3;
-    const startRow = boxRow * boxSize;
-    const startCol = boxCol * boxSize;
-    for (let r = startRow; r < startRow + boxSize; r++) {
-      for (let c = startCol; c < startCol + boxSize; c++) {
-        if ((r !== row || c !== col) && board[r][c] === num) {
-          return false;
-        }
-      }
-    }
-  }
+  const size = board.length;
   
   // Check consecutive constraints
   
@@ -179,52 +140,19 @@ export function isValidMove(
   return true;
 }
 
-// Generate a complete valid Consecutive Sudoku board using backtracking
-export function generateCompleteBoard(size: number, constraints: ConsecutiveConstraints): SudokuBoard {
-  const board = createEmptyBoard(size);
-  
-  function fillBoard(): boolean {
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
-        if (board[row][col] === null) {
-          // Try numbers 1 to size in random order
-          const numbers = Array.from({ length: size }, (_, i) => i + 1);
-          numbers.sort(() => Math.random() - 0.5);
-          
-          for (const num of numbers) {
-            if (isValidMove(board, row, col, num, constraints)) {
-              board[row][col] = num;
-              
-              if (fillBoard()) {
-                return true;
-              }
-              
-              board[row][col] = null;
-            }
-          }
-          
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-  
-  fillBoard();
-  return board;
-}
-
-// Generate a Consecutive Sudoku puzzle by removing numbers from a complete board
+// Generate a playable Consecutive Sudoku puzzle
 export function generatePuzzle(size: number, difficulty: 'easy' | 'medium' | 'hard' = 'medium'): {
   puzzle: SudokuBoard;
   solution: SudokuBoard;
   constraints: ConsecutiveConstraints;
 } {
-  // Generate constraints first
-  const constraints = generateConsecutiveConstraints(size);
+  // First generate a classic Sudoku solution
+  const solution = ClassicSudoku.generateCompleteBoard(size);
   
-  // Generate solution with these constraints
-  const solution = generateCompleteBoard(size, constraints);
+  // Generate consecutive constraints based on the solution
+  const constraints = generateConsecutiveConstraints(solution);
+  
+  // Create puzzle by removing numbers (same as classic Sudoku)
   const puzzle = solution.map(row => [...row]);
   
   // Remove numbers based on difficulty
@@ -251,20 +179,22 @@ export function generatePuzzle(size: number, difficulty: 'easy' | 'medium' | 'ha
   }
   
   // Shuffle positions
-  positions.sort(() => Math.random() - 0.5);
+  for (let i = positions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [positions[i], positions[j]] = [positions[j], positions[i]];
+  }
   
-  let removedCount = 0;
-  for (let i = 0; i < positions.length && removedCount < cellsToRemove; i++) {
+  // Remove numbers
+  for (let i = 0; i < cellsToRemove && i < positions.length; i++) {
     const [row, col] = positions[i];
     puzzle[row][col] = null;
-    removedCount++;
   }
   
   return { puzzle, solution, constraints };
 }
 
 // Validate the entire Consecutive Sudoku board
-export function validateBoard(board: SudokuBoard, constraints: ConsecutiveConstraints): boolean {
+export function validateBoard(board: SudokuBoard, constraints?: ConsecutiveConstraints): boolean {
   const size = board.length;
   
   for (let row = 0; row < size; row++) {
@@ -289,17 +219,10 @@ export function validateBoard(board: SudokuBoard, constraints: ConsecutiveConstr
 
 // Check if the board is complete (no empty cells)
 export function isBoardComplete(board: SudokuBoard): boolean {
-  for (let row = 0; row < board.length; row++) {
-    for (let col = 0; col < board[row].length; col++) {
-      if (board[row][col] === null) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return board.every(row => row.every(cell => cell !== null));
 }
 
 // Check if the board is solved (complete and valid)
-export function isBoardSolved(board: SudokuBoard, constraints: ConsecutiveConstraints): boolean {
+export function isBoardSolved(board: SudokuBoard, constraints?: ConsecutiveConstraints): boolean {
   return isBoardComplete(board) && validateBoard(board, constraints);
 }

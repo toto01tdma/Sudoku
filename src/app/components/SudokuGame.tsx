@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { SudokuBoard, SudokuType, getSudokuType, AnyBoard } from './table_board';
-import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard, ThaiAlphabetSudokuBoard, ConsecutiveSudokuBoard } from './table_board';
+import { ClassicSudokuBoard, DiagonalSudokuBoard, AlphabetSudokuBoard, EvenOddSudokuBoard, ThaiAlphabetSudokuBoard, ConsecutiveSudokuBoard, AsteriskSudokuBoard, JigsawSudokuBoard, WindokuSudokuBoard } from './table_board';
 import { ConsecutiveConstraints } from './table_board/consecutive_sudoku_board/SudokuGenerator';
+import { JigsawRegions } from './table_board/jigsaw_sudoku_board/SudokuGenerator';
 
 interface SudokuGameProps {
   size: 4 | 6 | 9;
@@ -20,6 +21,8 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
   const [errors, setErrors] = useState<Set<string>>(new Set());
   const [isComplete, setIsComplete] = useState(false);
   const [consecutiveConstraints, setConsecutiveConstraints] = useState<ConsecutiveConstraints | null>(null);
+  const [evenOddPattern, setEvenOddPattern] = useState<boolean[][] | null>(null);
+  const [jigsawRegions, setJigsawRegions] = useState<JigsawRegions | null>(null);
 
   // Generate new puzzle when component mounts or size/type changes
   useEffect(() => {
@@ -33,6 +36,20 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
       setConsecutiveConstraints(result.constraints as ConsecutiveConstraints);
     } else {
       setConsecutiveConstraints(null);
+    }
+    
+    // Handle even-odd pattern if present
+    if (sudokuType === 'even-odd' && 'evenOddPattern' in result && result.evenOddPattern) {
+      setEvenOddPattern(result.evenOddPattern as boolean[][]);
+    } else {
+      setEvenOddPattern(null);
+    }
+    
+    // Handle jigsaw regions if present
+    if (sudokuType === 'jigsaw' && 'jigsawRegions' in result && result.jigsawRegions) {
+      setJigsawRegions(result.jigsawRegions as JigsawRegions);
+    } else {
+      setJigsawRegions(null);
     }
     
     setFocusedCell(null);
@@ -254,11 +271,17 @@ export default function SudokuGame({ size, sudokuType, onBack, onPrintBoard }: S
                 case 'alphabet':
                   return <AlphabetSudokuBoard {...boardProps} />;
                 case 'even-odd':
-                  return <EvenOddSudokuBoard {...boardProps} />;
+                  return <EvenOddSudokuBoard {...boardProps} evenOddPattern={evenOddPattern || undefined} />;
                 case 'thai-alphabet':
                   return <ThaiAlphabetSudokuBoard {...boardProps} />;
                 case 'consecutive':
                   return <ConsecutiveSudokuBoard {...boardProps} constraints={consecutiveConstraints || { horizontal: [], vertical: [] }} />;
+                case 'asterisk':
+                  return <AsteriskSudokuBoard {...boardProps} />;
+                case 'jigsaw':
+                  return <JigsawSudokuBoard {...boardProps} jigsawRegions={jigsawRegions || undefined} />;
+                case 'windoku':
+                  return <WindokuSudokuBoard {...boardProps} />;
                 default:
                   return <ClassicSudokuBoard {...boardProps} />;
               }
